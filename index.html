@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شات مع زرعتك</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4fbf4; text-align: center; padding: 20px; }
+        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        .btn { background: #2d5a27; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin: 5px; cursor: pointer; width: 80%; }
+        #chat { margin-top: 20px; padding: 10px; background: #e8f5e9; border-radius: 10px; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🌿 أهلاً! أنا زرعتك الجديدة</h2>
+        <p>اسألني عن أي حاجة تخصني:</p>
+        <button class="btn" onclick="say('اسقيني مرتين في الأسبوع بمية فاترة.')">أشرب مية إمتى؟</button>
+        <button class="btn" onclick="say('أنا بحب الشمس جداً بس بلاش وقت الظهيرة الحار.')">أتحط في الشمس؟</button>
+        <button class="btn" onclick="say('لو الورق اصفرّ، يبقى سقتني مية زيادة!')">ليه ورقي بيصفر؟</button>
+        <div id="chat">اضغط على سؤال وهرد عليك..</div>
+    </div>
+    <script>
+        function say(msg) { document.getElementById('chat').innerText = msg; }
+    </script>
+</body>
+</html>
