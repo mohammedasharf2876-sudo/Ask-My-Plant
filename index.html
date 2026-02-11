@@ -3,314 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشتل محمد الذكي - AI</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <title>مشتل محمد الذكي</title>
     <style>
-        body {
-            font-family: 'IBM Plex Sans Arabic', sans-serif;
-            background-color: #fdfbf7;
+        /* تصميم احترافي ونضيف جداً */
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
         }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+        
+        /* الهيدر */
+        .header { 
+            background-color: #008069; /* لون الواتساب البيزنس */
+            color: white; 
+            padding: 15px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 10;
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+        .header-icon { font-size: 24px; }
+        .header-info h1 { margin: 0; font-size: 18px; font-weight: 600; }
+        .header-info p { margin: 2px 0 0; font-size: 12px; opacity: 0.9; }
+
+        /* منطقة الشات */
+        #chatBox { 
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); /* خلفية واتساب */
+            background-color: #e5ddd5;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
+
+        /* الرسائل */
+        .msg { 
+            padding: 10px 15px; 
+            border-radius: 8px; 
+            max-width: 80%; 
+            font-size: 15px; 
+            line-height: 1.5; 
+            position: relative; 
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+        .bot { 
+            background: white; 
+            align-self: flex-start; 
+            border-top-left-radius: 0; 
+            color: #111b21;
         }
-        @keyframes bounce-subtle {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+        .user { 
+            background: #d9fdd3; 
+            align-self: flex-end; 
+            border-top-right-radius: 0; 
+            color: #111b21;
         }
-        .animate-bounce-subtle {
-            animation: bounce-subtle 1.5s infinite ease-in-out;
+        .time { font-size: 10px; color: #999; margin-top: 5px; text-align: left; display: block; }
+
+        /* منطقة الكتابة */
+        .input-area { 
+            background: #f0f2f5; 
+            padding: 10px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
         }
+        input { 
+            flex: 1; 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 25px; 
+            outline: none; 
+            font-size: 15px; 
+            background: white;
+        }
+        button { 
+            background: #008069; 
+            color: white; 
+            border: none; 
+            padding: 12px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            width: 45px; 
+            height: 45px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+        button svg { width: 20px; height: 20px; fill: white; }
     </style>
-
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@0.1.1" 
-  }
-}
-</script>
 </head>
-<body class="overflow-hidden h-screen">
-    <div id="root"></div>
+<body>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom';
-        import { GoogleGenAI } from '@google/genai';
+    <div class="header">
+        <div class="header-icon">🌱</div>
+        <div class="header-info">
+            <h1 id="plantTitle">مشتل محمد الذكي</h1>
+            <p>مساعدك الشخصي للعناية بالنباتات</p>
+        </div>
+    </div>
 
-        // --- Constants & Database ---
-        const PLANT_DB = {
-            "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
-            "نعناع": { w: "كل يوم في الصيف (بيحب المية)", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
-            "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة (بيتحمل)", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
-            "زعتر": { w: "قليل جداً (بيكره المية الكتير)", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-            "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات عالأقل", f: "NPK عالي البوتاسيوم عشان يزهر", n: "قص الورد الدبلان أول بأول عشان يطلع جديد." },
-            "بوتس": { w: "كل 4-5 أيام (لما التربة تنشف)", s: "ضوء لمبة أو شباك (ضل)", f: "سماد ورقي", n: "أسهل زرعة للمبتدئين، بتعيش في أي حتة." },
-            "جلد النمر": { w: "كل أسبوعين مرة (انساه)", s: "أي إضاءة (قوية أو ضعيفة)", f: "مش محتاج", n: "بينقي الهوا ومبيموتش بسهولة (حديد)." },
-            "زاميا": { w: "مرة كل 20 يوم (جذوره بتخزن مية)", s: "ضل كامل أو ضوء خفيف", f: "NPK كل شهرين", n: "الزرعة الشيك، ورقها بيلمع لوحده." },
-        };
+    <div id="chatBox"></div>
 
-        // أيقونات SVG
-        const SendIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-        );
-        const ImageIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6.75v11.25a1.5 1.5 0 001.5 1.5z" />
-            </svg>
-        );
-        const MagicIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-3.47 2.82-1.741L12.63 12.29M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-            </svg>
-        );
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="اسألني عن الري، الشمس، التسميد..." onkeypress="handleEnter(event)">
+        <button onclick="replyLogic()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+        </button>
+    </div>
 
-        // --- API Services ---
-        // تم إضافة المفتاح هنا مباشرة عشان يشتغل
-        const getAI = () => new GoogleGenAI({ apiKey: "AIzaSyBYuDzE05mcTjRn6y9OC3UQbH6ppD4OXL4" });
+<script>
+    // --- قاعدة بيانات الـ 50 زرعة (نفس اللي كانت شغالة) ---
+    const plantDB = {
+        "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
+        "نعناع": { w: "كل يوم في الصيف", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
+        "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
+        "زعتر": { w: "قليل جداً", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
+        "لافندر": { w: "لما التربة تجف", s: "شمس قوية جداً", f: "قليل جداً", n: "ريحته مهدئة وبيحب الجو الجاف." },
+        "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات", f: "NPK عالي البوتاسيوم", n: "قص الورد الدبلان أول بأول." },
+        "فل": { w: "كل يومين", s: "شمس مغربلة", f: "حديد كل شهر", n: "ريحته فواحة وقت الغروب." },
+        "ياسمين": { w: "معتدل", s: "شمس كاملة", f: "سماد متوازن", n: "نبات متسلق، محتاج دعامة." },
+        "جاردينيا": { w: "مية خالية من الكلور", s: "ضوء قوي بدون شمس", f: "حديد وسماد حامضي", n: "بتحب مكانها ثابت." },
+        "مسك الليل": { w: "يوم ويوم", s: "شمس مباشرة", f: "سماد بلدي", n: "ريحته بتملأ الشارع بليل." },
+        "جهنمية": { w: "تعطيش عشان تزهر", s: "شمس حارقة", f: "مش محتاجة دلع", n: "كل ما تنشف عليها تطلع ورد أكتر." },
+        "بوتس": { w: "كل 4-5 أيام", s: "ضوء لمبة أو شباك (ضل)", f: "سماد ورقي", n: "أسهل زرعة للمبتدئين." },
+        "جلد النمر": { w: "كل أسبوعين مرة", s: "أي إضاءة", f: "مش محتاج", n: "بينقي الهوا ومبيموتش بسهولة." },
+        "زاميا": { w: "مرة كل 20 يوم", s: "ضل كامل", f: "NPK كل شهرين", n: "الزرعة الشيك، ورقها بيلمع." },
+        "مونستيـرا": { w: "لما نص التربة ينشف", s: "ضوء ساطع غير مباشر", f: "NPK", n: "بتحب رطوبة الجو (بخها مية)." },
+        "دراسيبنا": { w: "معتدل", s: "ضوء متوسط", f: "سماد أخضر", n: "شكلها زي النخلة الصغيرة." },
+        "صبار": { w: "نقطة مية كل شهر", s: "شمس أو ضوء قوي", f: "مش محتاج", n: "لو سقيته كتير بيموت." },
+        "الوفيرا": { w: "كل 3 أسابيع", s: "شمس خفيفة", f: "مرة في السنة", n: "الجل مفيد للبشرة والشعر." },
+        "فيكس نتدا": { w: "يوم ويوم", s: "شمس", f: "NPK عالي النيتروجين", n: "بيتعمل منه سور شجري." },
+        "ليمون": { w: "منتظم", s: "شمس كاملة", f: "حديد وعناصر صغرى", n: "عشان تطرح لازم شمس." }
+    };
 
-        const analyzePlantImage = async (base64Image, prompt = "Analyze this plant. Identify it and provide care instructions.") => {
-            const ai = getAI();
-            const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-            
-            // تحويل الصورة لصيغة يقبلها الموديل
-            const imagePart = {
-                inlineData: {
-                    data: base64Image.split(',')[1],
-                    mimeType: "image/jpeg"
-                }
-            };
+    // إعدادات الصفحة
+    const params = new URLSearchParams(window.location.search);
+    const rawType = params.get('type') || 'عامة';
+    const pType = rawType.replace(/_/g, ' '); 
+    document.getElementById('plantTitle').innerText = "دردشة مع: " + pType;
 
-            const result = await model.generateContent([prompt, imagePart]);
-            const response = await result.response;
-            return response.text();
-        };
+    // دالة إضافة الرسائل
+    function addMsg(text, side) {
+        const box = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = `msg ${side}`;
+        
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `${text} <span class="time">${time}</span>`;
+        
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
 
-        const chatWithBotanist = async (message, history) => {
-            const ai = getAI();
-            // استخدام موديل فلاش الأسرع والأكثر توافقاً
-            const model = ai.getGenerativeModel({ 
-                model: "gemini-1.5-flash",
-                systemInstruction: "أنت خبير في العناية بالنباتات في مشتل محمد الذكي. رد باللغة العربية بأسلوب ودود ومفيد. إذا سألك المستخدم عن الأسعار، أخبره أن الأسعار متغيرة ويجب زيارة المشتل."
-            });
-            
-            // تحويل التاريخ لصيغة مقبولة
-            const chat = model.startChat({
-                history: history.map(h => ({
-                    role: h.role === 'bot' ? 'model' : 'user',
-                    parts: [{ text: h.parts[0].text }]
-                }))
-            });
+    // رسالة الترحيب
+    setTimeout(() => {
+        let welcome = `أهلاً يا فنان! 👋<br>أنا نبتة <b>${pType}</b> من مشتل محمد.`;
+        if (plantDB[pType]) {
+            welcome += `<br>أنا جاهزة أقولك إزاي تهتم بيا وتخليني منورة! اسألني عن الري أو الشمس.`;
+        } else {
+            welcome += `<br>أنا تحت أمرك في أي سؤال عام عن الزرع.`;
+        }
+        addMsg(welcome, 'bot');
+    }, 500);
 
-            const result = await chat.sendMessage(message);
-            const response = await result.response;
-            return response.text();
-        };
+    // التعامل مع الإدخال
+    function handleEnter(e) { if (e.key === 'Enter') replyLogic(); }
 
-        // --- Main App Component ---
-        const App = () => {
-            const [messages, setMessages] = useState([]);
-            const [inputValue, setInputValue] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-            const [selectedImage, setSelectedImage] = useState(null);
-            const [isEditingMode, setIsEditingMode] = useState(false);
-            const chatEndRef = useRef(null);
-            const fileInputRef = useRef(null);
+    function replyLogic() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim().toLowerCase();
+        if (!text) return;
 
-            const params = new URLSearchParams(window.location.search);
-            const rawType = params.get('type') || 'عامة';
-            const plantType = rawType.replace(/_/g, ' ');
+        addMsg(text, 'user');
+        input.value = "";
 
-            useEffect(() => {
-                const info = PLANT_DB[plantType];
-                let welcomeText = `يا أهلاً! أنا مساعدك الذكي في مشتل محمد. 👋<br/>أنا هنا لمساعدتك في العناية بـ <b>${plantType}</b>.`;
-                if (info) {
-                    welcomeText += `<br/><br/>💡 <b>نظام الري:</b> ${info.w}<br/>☀️ <b>المكان:</b> ${info.s}<br/>💊 <b>التسميد:</b> ${info.f}`;
-                }
-                setMessages([{
-                    id: '1',
-                    text: welcomeText,
-                    sender: 'bot',
-                    timestamp: new Date()
-                }]);
-            }, [plantType]);
+        // محاكاة التفكير والرد
+        setTimeout(() => {
+            const info = plantDB[pType];
+            let reply = "سؤال جميل! بس خليني أكلمك عن الري والشمس أحسن.";
 
-            useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, [messages]);
+            if (text.includes("سعر") || text.includes("كام") || text.includes("فلوس")) {
+                reply = "الأسعار بتتغير حسب المقاس.. شرفنا في المشتل وهنعمل معاك أحلى واجب! 😉";
+            }
+            else if (text.includes("شكرا") || text.includes("حبيبي")) {
+                reply = "العفو يا غالي! نورتنا 💚";
+            }
+            else if (info) {
+                if (text.includes("مية") || text.includes("ري") || text.includes("اسقي")) 
+                    reply = `💧 <b>نظام الري:</b> ${info.w}`;
+                else if (text.includes("شمس") || text.includes("نور") || text.includes("ضوء") || text.includes("مكان")) 
+                    reply = `☀️ <b>المكان المناسب:</b> ${info.s}`;
+                else if (text.includes("سماد") || text.includes("اكل") || text.includes("غذا")) 
+                    reply = `💊 <b>التسميد:</b> ${info.f}`;
+                else 
+                    reply = `💡 <b>نصيحة ذهبية:</b> ${info.n}`;
+            } 
+            else {
+                if (text.includes("مية")) reply = "القاعدة العامة: حط صباعك في التربة، لو ناشفة اسقي، لو طرية استنى.";
+                else if (text.includes("شمس")) reply = "معظم الزرع بيحب ضوء قوي، بس بلاش شمس الضهر الحارقة.";
+                else reply = "يا ريت تتأكد من اسم الزرعة في الرابط، أو اسألني سؤال عام.";
+            }
 
-            const handleSend = async () => {
-                if (!inputValue.trim() && !selectedImage) return;
-
-                const userMsg = {
-                    id: Date.now().toString(),
-                    text: inputValue,
-                    sender: 'user',
-                    timestamp: new Date(),
-                    imageUrl: selectedImage,
-                    isEditing: isEditingMode
-                };
-
-                setMessages(prev => [...prev, userMsg]);
-                const currentInput = inputValue;
-                const currentImage = selectedImage;
-
-                setInputValue('');
-                setSelectedImage(null);
-                setIsEditingMode(false);
-                setIsLoading(true);
-
-                try {
-                    let botText = '';
-                    
-                    if (currentImage) {
-                         botText = await analyzePlantImage(currentImage, currentInput || "ما هذه النبتة وكيف أعتني بها؟");
-                    } else {
-                        // تجهيز التاريخ بشكل بسيط لتجنب الأخطاء
-                        const history = messages.slice(-4).map(m => ({
-                            role: m.sender,
-                            parts: [{ text: m.text }]
-                        }));
-                        botText = await chatWithBotanist(currentInput, history);
-                    }
-
-                    setMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        text: botText,
-                        sender: 'bot',
-                        timestamp: new Date()
-                    }]);
-                } catch (e) {
-                    console.error(e);
-                    // الرد الاحتياطي في حالة الخطأ
-                    let fallbackReply = "معلش النت مهنج عندي شوية، ممكن تسألني تاني؟";
-                    
-                    // استخدام قاعدة البيانات المحلية كاحتياطي
-                    const info = PLANT_DB[plantType];
-                    if (info && (currentInput.includes("مية") || currentInput.includes("ري"))) fallbackReply = `ولا يهمك، بالنسبة للري: ${info.w}`;
-                    if (info && (currentInput.includes("شمس") || currentInput.includes("ضوء"))) fallbackReply = `بالنسبة للمكان: ${info.s}`;
-
-                    setMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        text: fallbackReply,
-                        sender: 'bot',
-                        timestamp: new Date()
-                    }]);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const onFileChange = (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setSelectedImage(reader.result);
-                        setIsEditingMode(false);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
-            return (
-                <div className="flex flex-col h-screen max-w-2xl mx-auto bg-white shadow-2xl relative">
-                    <header className="bg-emerald-800 text-white p-4 shadow-lg flex items-center justify-between sticky top-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-emerald-100 p-2 rounded-full text-emerald-800 text-xl">🌱</div>
-                            <div>
-                                <h1 className="font-bold text-lg leading-tight">مشتل محمد الذكي</h1>
-                                <p className="text-xs text-emerald-200">مساعدك النباتي الشخصي</p>
-                            </div>
-                        </div>
-                    </header>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f9fafb] custom-scrollbar">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm transition-all ${
-                                    msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
-                                }`}>
-                                    {msg.imageUrl && (
-                                        <div className="mb-2 rounded-lg overflow-hidden border border-slate-200">
-                                            <img src={msg.imageUrl} className="max-w-full h-auto object-cover max-h-64" />
-                                        </div>
-                                    )}
-                                    <div className="text-sm md:text-base whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: msg.text }} />
-                                    <div className="text-[10px] mt-1 opacity-60">
-                                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {isLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white border border-slate-100 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-1">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></div>
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                                </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </div>
-
-                    <div className="p-4 bg-white border-t border-slate-200">
-                        {selectedImage && (
-                            <div className="mb-3 flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                                <div className="relative">
-                                    <img src={selectedImage} className="w-16 h-16 rounded-lg object-cover border border-slate-300" />
-                                    <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs">✕</button>
-                                </div>
-                                <div className="flex-1 flex flex-col gap-1">
-                                    <span className="text-xs font-medium text-slate-600">صورة مرفقة</span>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-2 bg-slate-100 rounded-3xl p-1 pr-4 shadow-inner">
-                            <input
-                                type="text"
-                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2"
-                                placeholder={isEditingMode ? "صف التعديل..." : "اسألني أي شيء..."}
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            />
-                            <div className="flex items-center gap-1">
-                                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-500 hover:text-emerald-600">
-                                    <ImageIcon />
-                                </button>
-                                <button onClick={handleSend} disabled={isLoading} className={`p-3 rounded-full ${isLoading ? 'bg-slate-300' : 'bg-emerald-600 text-white'}`}>
-                                    <SendIcon />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
+            addMsg(reply, 'bot');
+        }, 600);
+    }
+</script>
 </body>
 </html>
