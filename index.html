@@ -3,82 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oregano Talk - كلم زرعتك</title>
+    <title>شات الزرعة الذكي</title>
     <style>
-        /* ستايل شيك يشبه التطبيقات */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; margin: 0; padding-bottom: 80px; }
-        .header { background: #1b4d3e; color: white; padding: 20px; text-align: center; border-radius: 0 0 25px 25px; sticky; top: 0; }
-        .chat-box { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 12px 18px; border-radius: 20px; max-width: 80%; font-size: 15px; line-height: 1.5; }
-        .bot { background: #e2f0e9; align-self: flex-start; color: #1b4d3e; }
-        .user { background: #1b4d3e; align-self: flex-end; color: white; }
-        .input-area { position: fixed; bottom: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .input-area button { background: #1b4d3e; color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; }
+        body { font-family: sans-serif; background: #f4f4f4; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .chat-header { background: #2e7d32; color: white; padding: 15px; text-align: center; font-size: 1.2em; }
+        #chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; line-height: 1.4; }
+        .bot { background: white; align-self: flex-start; border: 1px solid #ddd; }
+        .user { background: #2e7d32; color: white; align-self: flex-end; }
+        .input-area { background: white; padding: 10px; display: flex; gap: 5px; border-top: 1px solid #ddd; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h2 id="pName">نبتة أوريجانو 🌿</h2>
-    <small>أنا هنا عشان أقولك محتاجة إيه!</small>
-</div>
-
-<div class="chat-box" id="chatBox">
-    </div>
+<div class="chat-header" id="pName">جاري التعرف على النبتة...</div>
+<div id="chat-box" id="messages"></div>
 
 <div class="input-area">
-    <button onclick="ask('أشرب مية إمتى؟')">شرب المية</button>
-    <button onclick="ask('أتحط فين؟')">مكاني فين؟</button>
-    <button onclick="clearChat()" style="background:#cc0000;">مسح الشات</button>
+    <input type="text" id="userInput" placeholder="اسألني أي حاجة...">
+    <button onclick="sendMessage()">إرسال</button>
 </div>
 
 <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const pType = urlParams.get('type') || 'default';
-
-    const data = {
-        'jasmine': { name: 'ياسمينة أوريجانو 🌼', welcome: 'يا أهلاً بيك! أنا ياسمينة.. ريحتي هتملى بيتك، بس دلعني!', water: 'اسقيني مرتين في الأسبوع، وبلاش تغرقني مية كتير يا فنان.', sun: 'حطني في البلكونة في مكان فيه شمس الصبح، بلاش شمس الظهر الحامية.' },
-        'cactus': { name: 'صبار المؤسسة 🌵', welcome: 'يا صاحبي أنا صبار يعني الصبر كله عندي، متقلقش عليا!', water: 'اسقيني مرة كل أسبوعين، أنا بحب العطش أكتر من المية.', sun: 'ارمينا في الشمس وسيبنا، أنا بعشق الحرارة.' }
+    // قاعدة بيانات أنواع الزرع (ضيف هنا اللي إنت عايزه)
+    const plantsData = {
+        "1": { name: "صبارة سيف", water: "اسقيني مرة كل 10 أيام.", sun: "أنا بحب الشمس القوية." },
+        "2": { name: "ياسمين بلدي", water: "اسقيني يوم ويوم.", sun: "خليني في ضوء الشمس بس مش المباشر." }
     };
 
-    const plant = data[pType] || data['jasmine'];
-    document.getElementById('pName').innerText = plant.name;
+    const params = new URLSearchParams(window.location.search);
+    const plantId = params.get('id') || "1"; // بياخد الرقم من اللينك
+    const currentPlant = plantsData[plantId];
 
-    // وظيفة حفظ واسترجاع الشات
-    function loadChat() {
-        const saved = localStorage.getItem('chat_' + pType);
-        if (saved) {
-            document.getElementById('chatBox').innerHTML = saved;
-        } else {
-            addMsg(plant.welcome, 'bot');
-        }
+    document.getElementById('pName').innerText = "دردشة مع: " + currentPlant.name;
+
+    function addMessage(text, side) {
+        const box = document.getElementById('chat-box');
+        box.innerHTML += `<div class="msg ${side}">${text}</div>`;
+        box.scrollTop = box.scrollHeight;
     }
 
-    function addMsg(text, side) {
-        const box = document.getElementById('chatBox');
-        const div = document.createElement('div');
-        div.className = `msg ${side}`;
-        div.innerText = text;
-        box.appendChild(div);
-        localStorage.setItem('chat_' + pType, box.innerHTML);
-        window.scrollTo(0, document.body.scrollHeight);
-    }
+    // أول رسالة ترحيب
+    addMessage(`أهلاً بيك! أنا ${currentPlant.name}، ومبسوطة إنك اشتريتني. عايز تعرف عني إيه؟`, 'bot');
 
-    function ask(q) {
-        addMsg(q, 'user');
+    function sendMessage() {
+        const input = document.getElementById('userInput');
+        const text = input.value;
+        if(!text) return;
+
+        addMessage(text, 'user');
+        input.value = '';
+
         setTimeout(() => {
-            let res = q.includes('مية') ? plant.water : plant.sun;
-            addMsg(res, 'bot');
-        }, 500);
+            if(text.includes('مية') || text.includes('أشرب')) addMessage(currentPlant.water, 'bot');
+            else if(text.includes('شمس') || text.includes('أتحط فين')) addMessage(currentPlant.sun, 'bot');
+            else addMessage("فهمتك، بس أنا لسه بتعلم أتكلم.. اسألني عن المية أو الشمس دلوقتي.", 'bot');
+        }, 600);
     }
-
-    function clearChat() {
-        localStorage.removeItem('chat_' + pType);
-        location.reload();
-    }
-
-    loadChat();
 </script>
-
 </body>
 </html>
