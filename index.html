@@ -1,164 +1,996 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشتل محمد الذكي</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #fdfbf7; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { background: #1b5e20; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.3em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #chatBox { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-image: radial-gradient(#dcedc8 1px, transparent 1px); background-size: 20px 20px; }
-        .msg { padding: 12px 18px; border-radius: 20px; max-width: 85%; font-size: 15px; line-height: 1.6; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .bot { background: white; align-self: flex-start; color: #333; border-bottom-right-radius: 2px; border: 1px solid #e0e0e0; }
-        .user { background: #2e7d32; align-self: flex-end; color: white; border-bottom-left-radius: 2px; }
-        .input-area { background: white; padding: 12px; display: flex; gap: 10px; border-top: 1px solid #ddd; }
-        input { flex: 1; padding: 12px 20px; border: 2px solid #e0e0e0; border-radius: 30px; outline: none; font-size: 16px; transition: 0.3s; }
-        input:focus { border-color: #2e7d32; }
-        button { background: #1b5e20; color: white; border: none; padding: 12px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مشتل محمد الذكي</title>
+  <style>
+    :root{
+      --g1:#1b5e20;
+      --g2:#2e7d32;
+      --bg:#fdfbf7;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --shadow: 0 6px 18px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      margin:0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Top */
+    .top{
+      background: linear-gradient(90deg, var(--g1), var(--g2));
+      color:#fff;
+      padding:14px 14px 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.12);
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .brand .title{
+      font-weight:800;
+      letter-spacing:.2px;
+      font-size:1.15rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:70vw;
+    }
+    .brand .tools{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+    }
+    .btn-mini{
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.12);
+      color:#fff;
+      padding:8px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.85rem;
+      backdrop-filter: blur(6px);
+    }
+    .btn-mini:active{transform:scale(.98)}
+
+    .plant-card{
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.25);
+      border-radius: var(--radius);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .plant-img{
+      width:72px;
+      height:72px;
+      border-radius:16px;
+      overflow:hidden;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.08);
+    }
+    .plant-img img{width:100%;height:100%;object-fit:cover;display:block}
+    .plant-meta{flex:1; min-width:0;}
+    .plant-meta .name{
+      font-weight:900;
+      font-size:1rem;
+      margin-bottom:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .plant-meta .sub{
+      font-size:.86rem;
+      opacity:.95;
+      color:#f1f5f9;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chips{
+      margin-top:8px;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.14);
+      color:#fff;
+      padding:6px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:.82rem;
+      user-select:none;
+    }
+    .chip:active{transform:scale(.98)}
+
+    /* Chat */
+    #chatBox{
+      flex:1;
+      padding:14px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      background-image: radial-gradient(#dcedc8 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .msg{
+      padding:12px 16px;
+      border-radius:20px;
+      max-width: 90%;
+      font-size:15px;
+      line-height:1.75;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      position:relative;
+      word-break:break-word;
+    }
+    .bot{
+      background: var(--card);
+      align-self:flex-start;
+      color:#111827;
+      border-bottom-right-radius: 6px;
+      border:1px solid var(--line);
+    }
+    .user{
+      background: var(--g2);
+      align-self:flex-end;
+      color:#fff;
+      border-bottom-left-radius: 6px;
+    }
+    .meta-line{
+      margin-top:8px;
+      font-size:.85rem;
+      color: var(--muted);
+    }
+    .mini-actions{
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .mini-actions button{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:7px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:.85rem;
+    }
+    .mini-actions button:hover{background:#f9fafb}
+    .typing{
+      opacity:.9;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:#111827;
+    }
+    .dots{display:inline-flex; gap:4px;}
+    .dot{
+      width:6px;height:6px;border-radius:50%;
+      background:#9ca3af;
+      animation: bounce 1s infinite ease-in-out;
+    }
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+
+    /* Input */
+    .input-area{
+      background:#fff;
+      padding:12px;
+      display:flex;
+      gap:10px;
+      border-top:1px solid var(--line);
+      align-items:center;
+    }
+    input{
+      flex:1;
+      padding:12px 16px;
+      border:2px solid #e5e7eb;
+      border-radius:999px;
+      outline:none;
+      font-size:16px;
+      transition:.25s;
+    }
+    input:focus{border-color: var(--g2)}
+    .btn-send{
+      background: var(--g1);
+      color:#fff;
+      border:none;
+      padding:12px 16px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .btn-voice{
+      background:#fff;
+      color: var(--g1);
+      border:2px solid #e5e7eb;
+      padding:12px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .btn-voice.active{
+      border-color: var(--g2);
+      box-shadow: 0 0 0 4px rgba(46,125,50,.15);
+    }
+
+    /* Small */
+    @media (max-width:420px){
+      .plant-img{width:62px;height:62px}
+      .btn-mini{padding:7px 9px}
+      .chip{padding:6px 9px}
+    }
+  </style>
 </head>
+
 <body>
+  <div class="top">
+    <div class="brand">
+      <div class="title" id="plantTitle">نبتتك الذكية 🌱</div>
+      <div class="tools">
+        <button class="btn-mini" onclick="showHelp()">الأوامر</button>
+        <button class="btn-mini" onclick="showPlantList()">الأنواع</button>
+        <button class="btn-mini" onclick="clearChat()">مسح</button>
+      </div>
+    </div>
 
-<div class="header" id="plantTitle">نبتتك الذكية 🌱</div>
-<div id="chatBox"></div>
+    <div class="plant-card">
+      <div class="plant-img"><img id="plantImg" alt="صورة النبات" /></div>
+      <div class="plant-meta">
+        <div class="name" id="plantName">—</div>
+        <div class="sub" id="plantSub">—</div>
+        <div class="chips" id="quickChips"></div>
+      </div>
+    </div>
+  </div>
 
-<div class="input-area">
-    <input type="text" id="userInput" placeholder="اسألني عن الري، الشمس..." onkeypress="handleEnter(event)">
-    <button onclick="replyLogic()">إرسال</button>
-</div>
+  <div id="chatBox"></div>
+
+  <div class="input-area">
+    <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+    <input id="userInput" type="text" placeholder="اسألني… (ازيك؟ ري؟ اصفرار؟ حشرات؟ نقل أصيص؟)" onkeypress="handleEnter(event)" />
+    <button class="btn-send" onclick="replyLogic()">إرسال</button>
+  </div>
 
 <script>
-    const params = new URLSearchParams(window.location.search);
-    // تنظيف الاسم من الشرط السفلية واستبدالها بمسافات
-    const rawType = params.get('type') || 'عامة';
-    const pType = rawType.replace(/_/g, ' '); 
-    document.getElementById('plantTitle').innerText = "دردشة مع: " + pType;
+/* =========================
+   1) قاعدة بيانات النباتات
+   - img: اختياري (روابط ثابتة أو صور محلية)
+   - q : كلمة بحث للصور (لو img مش موجودة هنجيب صورة تلقائي من Unsplash)
+   - aliases: أسماء بديلة (عشان لو المستخدم كتب اسم مختلف)
+========================= */
+const plantDB = {
+  // عطريات وأعشاب
+  "ريحان": { cat:"عطري/عشب", q:"basil herb plant", aliases:["حبق"], w:"يوم ويوم (التربة رطبة دائماً بدون إغراق)", s:"شمس مباشرة صباحاً + تهوية", f:"سماد عضوي خفيف كل شهر", n:"اقطف القمم النامية عشان يفرّع." },
+  "نعناع": { cat:"عطري/عشب", q:"mint plant", aliases:["نعناع بلدي"], w:"كل يوم في الصيف (بيحب المية) + لازم صرف كويس", s:"شمس خفيفة أو نصف ظل", f:"سماد متوازن NPK خفيف كل 3-4 أسابيع", n:"الجذور بتجري… الأفضل في أصيص لوحده." },
+  "روزماري": { cat:"عطري/عشب", q:"rosemary plant", aliases:["إكليل الجبل"], w:"لما التربة تنشف تماماً", s:"شمس قوية (بيتحمل)", f:"مش محتاج تسميد كتير", n:"ريحته بتطرد بعض الحشرات." },
+  "زعتر": { cat:"عطري/عشب", q:"thyme herb plant", aliases:["زعتر بلدي"], w:"قليل جداً (بيكره المية الكتير)", s:"شمس كاملة", f:"مرة كل موسم", n:"قوي وبيتقبل الجفاف." },
+  "لافندر": { cat:"عطري/عشب", q:"lavender plant", aliases:["خُزامى"], w:"لما التربة تجف (بيكره الرطوبة)", s:"شمس قوية جداً", f:"قليل جداً", n:"بيحب الجو الجاف والتهوية." },
 
-    // --- قاعدة بيانات الـ 50 زرعة (المخ) ---
-    const plantDB = {
-        // --- عطريات وأعشاب ---
-        "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
-        "نعناع": { w: "كل يوم في الصيف (بيحب المية)", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
-        "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة (بيتحمل)", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
-        "زعتر": { w: "قليل جداً (بيكره المية الكتير)", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-        "لافندر": { w: "لما التربة تجف (بيكره الرطوبة)", s: "شمس قوية جداً", f: "قليل جداً", n: "ريحته مهدئة وبيحب الجو الجاف." },
-        
-        // --- زهور ومزهرات ---
-        "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات عالأقل", f: "NPK عالي البوتاسيوم عشان يزهر", n: "قص الورد الدبلان أول بأول عشان يطلع جديد." },
-        "فل": { w: "كل يومين (تربة رطبة)", s: "شمس مغربلة (مش حارقة)", f: "حديد كل شهر عشان الورق ميصفرش", n: "ريحته فواحة جداً وقت الغروب." },
-        "ياسمين": { w: "معتدل (لما الوش ينشف)", s: "شمس كاملة", f: "سماد متوازن", n: "نبات متسلق، محتاج دعامة يسند عليها." },
-        "جاردينيا": { w: "مية خالية من الكلور (فلتر)", s: "ضوء قوي جداً بس مش شمس مباشرة", f: "حديد وسماد حامضي", n: "دلوعة المشتل، بتزعل لو مكانها اتغير." },
-        "مسك الليل": { w: "يوم ويوم", s: "شمس مباشرة", f: "سماد بلدي", n: "ريحته بتملأ الشارع كله بليل." },
-        "جهنمية": { w: "تعطيش عشان تزهر (قليل)", s: "شمس حارقة طول اليوم", f: "مش محتاجة دلع", n: "كل ما تنشف عليها المية تطلع ورد أكتر." },
-        "هايبسكس": { w: "يوم ويوم في الصيف", s: "شمس مباشرة", f: "NPK كل أسبوعين", n: "زهرتها بتعيش يوم واحد بس شكلها روعة." },
-        "ونكا": { w: "كل يوم في الحر", s: "شمس أو نصف ظل", f: "NPK متعادل", n: "أقوى نبات مزهر بيستحمل حرارة مصر." },
-        "جارونيا": { w: "معتدل", s: "شمس الصبح بس", f: "بوتاسيوم للتزهير", n: "ريحتها مميزة وبتطرد الناموس." },
+  // زهور ومزهرات
+  "ورد بلدي": { cat:"زهور", q:"rose plant", aliases:["ورد"], w:"يوم ويوم بانتظام حسب الجو", s:"شمس مباشرة 6 ساعات على الأقل", f:"NPK عالي البوتاسيوم وقت التزهير", n:"قص الورد الدبلان أول بأول." },
+  "فل": { cat:"زهور", q:"jasmine sambac plant", aliases:["فل بلدي"], w:"كل يومين (تربة رطبة بدون غرق)", s:"شمس مغربلة (مش حارقة)", f:"حديد كل شهر لو الورق بيصفر", n:"ريحتها بتقوى وقت الغروب." },
+  "ياسمين": { cat:"زهور", q:"jasmine vine plant", aliases:["ياسمين متسلق"], w:"معتدل (لما الوش ينشف)", s:"شمس كاملة", f:"سماد متوازن", n:"محتاج دعامة/شبك للتسلق." },
+  "جاردينيا": { cat:"زهور", q:"gardenia plant", aliases:["Gardenia"], w:"مياه قليلة الكلور + ثبات في الري", s:"ضوء قوي جداً غير مباشر", f:"حديد + سماد حامضي", n:"بتكره تغيير المكان فجأة." },
+  "مسك الليل": { cat:"زهور", q:"night blooming jasmine plant", aliases:["مسك"], w:"يوم ويوم", s:"شمس مباشرة", f:"سماد بلدي/عضوي", n:"ريحتها بتزيد بالليل." },
+  "جهنمية": { cat:"زهور خارجية", q:"bougainvillea plant", aliases:["بوچنفليا"], w:"تعطيش خفيف عشان تزهر (قليل)", s:"شمس حارقة طول اليوم", f:"مش محتاجة دلع", n:"كل ما تقل المية تطلع ورد أكتر (من غير ما تذبل)." },
+  "هايبسكس": { cat:"زهور", q:"hibiscus plant", aliases:["كركديه زينة","هيبسكس"], w:"يوم ويوم في الصيف", s:"شمس مباشرة", f:"NPK كل أسبوعين", n:"زهرتها يوم واحد بس… بس شكلها رهيب." },
+  "ونكا": { cat:"زهور", q:"vinca plant", aliases:["ونكا روز"], w:"كل يوم في الحر لو أصيص صغير", s:"شمس أو نصف ظل", f:"NPK متعادل", n:"من أقوى المزهرات في حر مصر." },
+  "جارونيا": { cat:"زهور", q:"geranium plant", aliases:["جرانيوم","إبرة الراعي"], w:"معتدل", s:"شمس الصبح بس", f:"بوتاسيوم للتزهير", n:"بتحب هواء ومكان منور." },
 
-        // --- نباتات زينة داخلية (ضليلة) ---
-        "بوتس": { w: "كل 4-5 أيام (لما التربة تنشف)", s: "ضوء لمبة أو شباك (ضل)", f: "سماد ورقي", n: "أسهل زرعة للمبتدئين، بتعيش في أي حتة." },
-        "جلد النمر": { w: "كل أسبوعين مرة (انساه)", s: "أي إضاءة (قوية أو ضعيفة)", f: "مش محتاج", n: "بينقي الهوا ومبيموتش بسهولة (حديد)." },
-        "زاميا": { w: "مرة كل 20 يوم (جذوره بتخزن مية)", s: "ضل كامل أو ضوء خفيف", f: "NPK كل شهرين", n: "الزرعة الشيك، ورقها بيلمع لوحده." },
-        "مونستيـرا": { w: "لما نص التربة ينشف", s: "ضوء ساطع غير مباشر", f: "NPK", n: "الورق بيتقطع شكله تحفة، بتحب رطوبة الجو (بخها مية)." },
-        "دراسيبنا": { w: "معتدل", s: "ضوء متوسط", f: "سماد أخضر", n: "شكلها زي النخلة الصغيرة، بتنقي الجو." },
-        "سنجونيوم": { w: "رطوبة مستمرة", s: "ضل", f: "NPK", n: "ورقها شبه السهم، بتكبر بسرعة." },
-        "انتوريوم": { w: "مية مفلترة", s: "ضوء قوي جداً جوه البيت", f: "سماد زهور", n: "زهرتها حمراء وشكلها بلاستيك من كتر الجمال." },
-        "فيكس ديكورا": { w: "لما التربة تنشف تماماً", s: "ضوء شباك قوي", f: "NPK", n: "امسح ورقها بقماشة مبلولة عشان يلمع." },
-        "بامبو": { w: "غير المية كل أسبوع (لو في فازة)", s: "ضوء غرفة", f: "نقطتين مغذي في المية", n: "نبات الحظ، بيعيش في المية بس." },
-        "كروتون": { w: "بيحب العطش شوية", s: "ضوء قوي عشان يلون", f: "NPK", n: "لو الضوء قل ورقه بيبقى أخضر بس." },
-        "قشطة": { w: "معتدل", s: "ضوء ساطع", f: "NPK", n: "ورقها مخرم وشكلها ديكور جداً." },
-        "بوجا": { w: "لما تجف", s: "ضل", f: "متوازن", n: "نبات صبور وشكله كلاسيك." },
-        "أجلونيما": { w: "معتدل", s: "ضل أو ضوء خفيف", f: "NPK", n: "ورقها ملون وفضي، بتستحمل قلة الضوء." },
-        "فوجير": { w: "بيحب المية والرش", s: "ضل ورطوبة", f: "سماد ورقي", n: "عايز معاملة خاصة ورطوبة عالية." },
-        
-        // --- صبارات وعصاريات ---
-        "صبار": { w: "نقطة مية كل شهر", s: "شمس أو ضوء قوي", f: "مش محتاج", n: "لو سقيته كتير بيموت (بيعفن)." },
-        "الوفيرا": { w: "كل 3 أسابيع", s: "شمس خفيفة", f: "مرة في السنة", n: "الجل اللي جواها مفيد للبشرة والشعر." },
-        "إيشفيريا": { w: "قليل جداً", s: "شمس", f: "كاكتوس", n: "شكلها زي الوردة، حساسة للمية." },
-        "كالانشو": { w: "لما التربة تحجر", s: "ضوء شباك", f: "NPK", n: "صبار مزهر، ورده ألوانه كتير." },
+  // نباتات زينة داخلية (ضليلة)
+  "بوتس": { cat:"داخلي", q:"pothos plant", aliases:["بوتس ذهبي","Pothos"], w:"كل 4-5 أيام (لما التربة تنشف)", s:"ضوء شباك/لمبة (ضل)", f:"سماد ورقي خفيف", n:"أسهل زرعة للمبتدئين." },
+  "جلد النمر": { cat:"داخلي", q:"snake plant sansevieria", aliases:["سانسيفيريا","سنسفيريا"], w:"كل أسبوعين مرة (انساه)", s:"أي إضاءة (قوية أو ضعيفة)", f:"مش محتاج", n:"مستحمل جداً… الزيادة في الري بتعفّنه." },
+  "زاميا": { cat:"داخلي", q:"zz plant zamioculcas", aliases:["ZZ"], w:"مرة كل 20 يوم", s:"ضل كامل أو ضوء خفيف", f:"NPK كل شهرين", n:"شكلها شيك وبتلمع." },
+  "مونستيـرا": { cat:"داخلي", q:"monstera deliciosa plant", aliases:["مونستيرا"], w:"لما نص التربة ينشف", s:"ضوء ساطع غير مباشر", f:"NPK شهرياً (ربيع/صيف)", n:"بتحب رطوبة الجو… رش خفيف." },
+  "دراسيبنا": { cat:"داخلي", q:"dracaena plant", aliases:["دراسينا"], w:"معتدل", s:"ضوء متوسط", f:"سماد أخضر", n:"امسح الورق عشان يلمع." },
+  "سنجونيوم": { cat:"داخلي", q:"syngonium plant", aliases:["سنغونيوم"], w:"رطوبة مستمرة بدون غرق", s:"ضل", f:"NPK خفيف", n:"بتكبر بسرعة وورقها شبه السهم." },
+  "انتوريوم": { cat:"داخلي", q:"anthurium plant", aliases:["أنثوريوم"], w:"مياه قليلة الكلور", s:"ضوء قوي جداً داخل البيت", f:"سماد زهور", n:"زهرتها بتفضل مدة طويلة." },
+  "فيكس ديكورا": { cat:"داخلي/نصف خارجي", q:"ficus elastica rubber plant", aliases:["فيكس مطاط","روبر"], w:"لما التربة تنشف تماماً", s:"ضوء شباك قوي", f:"NPK", n:"نضّف الورق بقماشة مبلولة." },
+  "بامبو": { cat:"داخلي", q:"lucky bamboo plant", aliases:["لاكي بامبو"], w:"غير المية كل أسبوع (لو في فازة)", s:"ضوء غرفة", f:"نقطتين مغذي في المية", n:"خليك على مية نظيفة عشان ميعفنش." },
+  "كروتون": { cat:"داخلي", q:"croton plant", aliases:["كروتن"], w:"بيحب العطش شوية بين الريات", s:"ضوء قوي عشان يلوّن", f:"NPK", n:"لو الضوء قل… الورق يخضر." },
+  "أجلونيما": { cat:"داخلي", q:"aglaonema plant", aliases:["أجلونيمة"], w:"معتدل", s:"ضل أو ضوء خفيف", f:"NPK خفيف", n:"بتستحمل قلة الضوء." },
+  "فوجير": { cat:"داخلي", q:"fern plant", aliases:["سرخس"], w:"بيحب المية والرش", s:"ضل ورطوبة", f:"سماد ورقي", n:"عايز رطوبة ثابتة." },
+  "يوكا": { cat:"داخلي/خارجي", q:"yucca plant", aliases:["يوكا كين"], w:"قليل جداً", s:"شمس أو ضل", f:"متوازن كل شهرين", n:"قوي جداً ومش دلوع." },
+  "شفليرا": { cat:"داخلي", q:"schefflera plant", aliases:["شيفليرا"], w:"معتدل", s:"ضوء قوي", f:"NPK", n:"لو اتطولت… قص القمم هتفرّع." },
 
-        // --- أشجار وشجيرات خارجية ---
-        "فيكس نتدا": { w: "يوم ويوم", s: "شمس", f: "NPK عالي النيتروجين", n: "بيتعمل منه سور شجري ممتاز." },
-        "تيكوما": { w: "معتدل", s: "شمس", f: "متوازن", n: "وردها أصفر وشكلها مبهج." },
-        "لانتانا": { w: "قليل", s: "شمس حارقة", f: "مش ضروري", n: "بتلم فراشات وألوانها بتتغير." },
-        "مورينجا": { w: "معتدل", s: "شمس", f: "عضوي", n: "الشجرة المعجزة، ورقها مفيد جداً." },
-        "ليمون": { w: "منتظم (بيكره العطش)", s: "شمس كاملة", f: "حديد وعناصر صغرى", n: "عشان تطرح لازم شمس وتسميد." },
-        "زيتون": { w: "قليل", s: "شمس", f: "عضوي", n: "شجرة مباركة وبتعيش سنين." },
+  // صبارات وعصاريات
+  "صبار": { cat:"عصاريات", q:"cactus plant", aliases:["كاكتوس"], w:"نقطة مية كل شهر (حسب الجو)", s:"شمس أو ضوء قوي", f:"مش محتاج", n:"الزيادة في الري = عفن." },
+  "الوفيرا": { cat:"عصاريات", q:"aloe vera plant", aliases:["ألوفيرا","ألوة"], w:"كل 3 أسابيع", s:"شمس خفيفة", f:"مرة في السنة", n:"الجل مفيد… بس بلاش غرق." },
+  "إيشفيريا": { cat:"عصاريات", q:"echeveria succulent", aliases:["Echeveria"], w:"قليل جداً", s:"شمس", f:"سماد كاكتوس خفيف", n:"متلمّسش قلبها مية كتير." },
+  "كالانشو": { cat:"عصاريات مزهرة", q:"kalanchoe plant", aliases:["كالانكوا"], w:"لما التربة تحجر", s:"ضوء شباك", f:"NPK خفيف", n:"زهور ألوان كتير." },
 
-        // --- إضافات أخرى ---
-        "سجاد": { w: "كل يومين", s: "شمس خفيفة أو ضل منور", f: "NPK", n: "قص الشمروخ الزهري عشان الورق يفضل قوي." },
-        "قطيفة": { w: "يوم ويوم", s: "شمس", f: "NPK", n: "وردة شتوية بتعيش لحد الربيع." },
-        "قرنفل": { w: "معتدل", s: "شمس", f: "متوازن", n: "ريحته حلوة وشكله بلدي." },
-        "نعناع سعودي": { w: "كتير", s: "نصف ظل", f: "عضوي", n: "ورقته صغيرة وريحته أقوى من البلدي." },
-        "زعتر بري": { w: "قليل", s: "شمس", f: "لا يوجد", n: "بيتحمل الحرارة جداً." },
-        "أكاسيا": { w: "قليل", s: "شمس", f: "لا يوجد", n: "شجرة ضل ممتازة." },
-        "بونسياتا": { w: "معتدل", s: "ضوء ساطع", f: "NPK", n: "بنت القنصل، ورقها بيحمر في الشتا." },
-        "دراسينا ليمون": { w: "لما تجف", s: "ضوء متوسط", f: "ورقي", n: "لونها ليموني مبهج." },
-        "يوكا": { w: "قليل جداً", s: "شمس أو ضل", f: "متوازن", n: "نبات قوي جداً وسعره حنين." },
-        "شفليرا": { w: "معتدل", s: "ضوء قوي", f: "NPK", n: "شجيرة داخلية شكلها كثيف." }
+  // أشجار وشجيرات خارجية
+  "فيكس نتدا": { cat:"خارجي", q:"ficus nitida tree", aliases:["فيكس نيتيدا","فيكس سور"], w:"يوم ويوم", s:"شمس", f:"NPK عالي النيتروجين", n:"ممتاز كسور شجري." },
+  "تيكوما": { cat:"خارجي", q:"tecoma stans plant", aliases:["تيكوما صفراء"], w:"معتدل", s:"شمس", f:"متوازن", n:"وردها أصفر مبهج." },
+  "لانتانا": { cat:"خارجي", q:"lantana plant", aliases:["لانتانا ملونة"], w:"قليل", s:"شمس حارقة", f:"مش ضروري", n:"بتلم فراشات وألوانها بتتغير." },
+  "مورينجا": { cat:"خارجي", q:"moringa tree", aliases:["مورينغا"], w:"معتدل", s:"شمس", f:"عضوي", n:"ورقها مفيد… بس محتاجة شمس." },
+  "ليمون": { cat:"مثمر", q:"lemon tree", aliases:["ليمون بلدي"], w:"منتظم (بيكره العطش)", s:"شمس كاملة", f:"حديد + عناصر صغرى", n:"عشان يطرح: شمس + تسميد + ري منتظم." },
+  "زيتون": { cat:"مثمر", q:"olive tree", aliases:["شجرة زيتون"], w:"قليل", s:"شمس", f:"عضوي", n:"شجرة معمّرة وتستحمل." },
+
+  // إضافات
+  "سجاد": { cat:"داخلي", q:"spider plant chlorophytum", aliases:["سبايدر","كلوروفيتوم"], w:"كل يومين/3 حسب الجو", s:"شمس خفيفة أو ضل منور", f:"NPK", n:"قص الشمروخ الزهري لو عايز الورق يقوى." },
+  "قطيفة": { cat:"زهور", q:"marigold plant", aliases:["قطيفة بلدي","ماريجولد"], w:"يوم ويوم", s:"شمس", f:"NPK", n:"بتزهر كويس في الجو المعتدل." },
+  "قرنفل": { cat:"زهور", q:"carnation plant", aliases:["قرنفل بلدي"], w:"معتدل", s:"شمس", f:"متوازن", n:"هواء كويس يقلل الفطريات." },
+  "نعناع سعودي": { cat:"عطري/عشب", q:"mint plant", aliases:["نعناع صغير"], w:"كتير", s:"نصف ظل", f:"عضوي", n:"ريحته قوية… بس عايز ري أكتر." },
+  "زعتر بري": { cat:"عطري/عشب", q:"wild thyme plant", aliases:["زعتر جبلي"], w:"قليل", s:"شمس", f:"لا يوجد", n:"يتحمل حرارة وجفاف." },
+  "أكاسيا": { cat:"خارجي", q:"acacia tree", aliases:["اكاسيا"], w:"قليل", s:"شمس", f:"لا يوجد", n:"شجرة ظل ممتازة." },
+  "بونسياتا": { cat:"داخلي/نصف خارجي", q:"poinsettia plant", aliases:["بنت القنصل","بوينسياتيا"], w:"معتدل", s:"ضوء ساطع", f:"NPK", n:"بتلوّن في الشتاء لو إضاءة كويسة." },
+  "دراسينا ليمون": { cat:"داخلي", q:"dracaena lemon lime plant", aliases:["دراسينا ليمون لايم"], w:"لما تجف", s:"ضوء متوسط", f:"ورقي", n:"لونها مبهج… بلاش شمس حارقة." },
+
+  // إضافات لرفع “القوة الخارقة”
+  "زنبق السلام": { cat:"داخلي", q:"peace lily plant", aliases:["سباثيفيلوم","Peace Lily"], w:"لما سطح التربة ينشف", s:"ضوء غير مباشر", f:"سماد أخضر خفيف", n:"لو عطشان… بيتهدل ويفوق بعد الري." },
+  "ديفنباخيا": { cat:"داخلي", q:"dieffenbachia plant", aliases:["ديفنباخيا"], w:"معتدل", s:"ضوء متوسط غير مباشر", f:"NPK خفيف", n:"سامّة لو اتاكلت… خليك بعيد عن أطفال/حيوانات." },
+  "كالاثيا": { cat:"داخلي", q:"calathea plant", aliases:["كالاتيا"], w:"رطوبة ثابتة", s:"ضوء خفيف", f:"ورقي خفيف", n:"بتحب مية قليلة الكلور ورطوبة عالية." },
+  "فيلوديندرون": { cat:"داخلي", q:"philodendron plant", aliases:["فيلودندرون"], w:"لما الوش ينشف", s:"ضوء غير مباشر", f:"NPK خفيف", n:"شبيه بالمونستيرا… وبيحب رطوبة." },
+  "أريكا": { cat:"داخلي", q:"areca palm", aliases:["نخيل أريكا"], w:"معتدل", s:"ضوء ساطع غير مباشر", f:"متوازن", n:"يرفع الرطوبة حوالين المكان." },
+};
+
+/* =========================
+   2) ذكاء المحادثة (NLP بسيط)
+========================= */
+const state = {
+  plantKey: null,
+  plantNameFromURL: null,
+  plantObj: null,
+  lastTopic: null,
+  lastBotPayload: null,
+  voiceOn: false,
+  recognition: null
+};
+
+const QUICK_CHIPS = ["ازيك؟", "خلاصة العناية", "الري", "الشمس/المكان", "سماد", "اصفرار/ذبول", "حشرات", "نقل أصيص", "إكثار", "تقليم", "تربة", "سُمّية للحيوانات؟", "اشرحلي أكتر"];
+
+function escapeHTML(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function normalizeArabic(str){
+  if(!str) return "";
+  return str
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[إأآا]/g,"ا")
+    .replace(/ى/g,"ي")
+    .replace(/ة/g,"ه")
+    .replace(/ؤ/g,"و")
+    .replace(/ئ/g,"ي")
+    .replace(/ـ/g,"")
+    .replace(/[ًٌٍَُِّْ]/g,"")
+    .replace(/\s+/g," ");
+}
+
+function similarity(a,b){
+  // تشابه بسيط (Jaccard على الكلمات) + مكافأة لو نفس البداية
+  a = normalizeArabic(a); b = normalizeArabic(b);
+  if(!a || !b) return 0;
+  if(a === b) return 1;
+  const A = new Set(a.split(" "));
+  const B = new Set(b.split(" "));
+  let inter=0;
+  for(const x of A) if(B.has(x)) inter++;
+  const union = A.size + B.size - inter;
+  let score = union ? inter/union : 0;
+  if(b.startsWith(a) || a.startsWith(b)) score += 0.2;
+  return Math.min(1, score);
+}
+
+function findPlantKeyByName(name){
+  const n = normalizeArabic(name);
+  if(!n) return null;
+
+  // direct key match
+  for(const key of Object.keys(plantDB)){
+    if(normalizeArabic(key) === n) return key;
+  }
+
+  // alias match
+  for(const [key,obj] of Object.entries(plantDB)){
+    if(obj.aliases){
+      for(const al of obj.aliases){
+        if(normalizeArabic(al) === n) return key;
+      }
+    }
+  }
+
+  // fuzzy match
+  let bestKey=null, bestScore=0;
+  for(const key of Object.keys(plantDB)){
+    const sc = similarity(n, key);
+    if(sc > bestScore){ bestScore=sc; bestKey=key; }
+    const obj = plantDB[key];
+    if(obj.aliases){
+      for(const al of obj.aliases){
+        const sc2 = similarity(n, al);
+        if(sc2 > bestScore){ bestScore=sc2; bestKey=key; }
+      }
+    }
+  }
+  return bestScore >= 0.55 ? bestKey : null;
+}
+
+function getUnsplash(query){
+  // صورة تلقائية لأي نبات (حتى لو النوع مش في القاعدة)
+  // ملاحظة: الصورة بتتغير حسب نتائج Unsplash
+  const q = encodeURIComponent((query || "plant").toString());
+  return `https://source.unsplash.com/640x480/?${q}`;
+}
+
+function setPlant(typeFromURL){
+  state.plantNameFromURL = typeFromURL || "عامة";
+  const maybeKey = findPlantKeyByName(state.plantNameFromURL);
+  state.plantKey = maybeKey;
+  state.plantObj = maybeKey ? plantDB[maybeKey] : null;
+
+  const displayName = maybeKey || state.plantNameFromURL || "عامة";
+  document.getElementById("plantTitle").innerText = "دردشة مع: " + displayName + " 🌱";
+  document.getElementById("plantName").innerText = displayName;
+
+  const sub = state.plantObj
+    ? `نوع: ${state.plantObj.cat} • اسألني بأي طريقة (حتى لو سؤال عام أو أعراض)`
+    : `مش لاقي النوع ده في القائمة… بس هساعدك بإجابات عامة + تشخيص ذكي`;
+  document.getElementById("plantSub").innerText = sub;
+
+  // image
+  const imgEl = document.getElementById("plantImg");
+  const q = state.plantObj?.q || displayName;
+  const img = (state.plantObj?.img && state.plantObj.img[0]) ? state.plantObj.img[0] : getUnsplash(q);
+  imgEl.src = img;
+  imgEl.onerror = () => { imgEl.src = getUnsplash("plant"); };
+
+  renderChips();
+  loadChat();
+}
+
+function renderChips(){
+  const box = document.getElementById("quickChips");
+  box.innerHTML = "";
+  QUICK_CHIPS.forEach(t=>{
+    const c = document.createElement("div");
+    c.className = "chip";
+    c.textContent = t;
+    c.onclick = ()=>{ document.getElementById("userInput").value = t; document.getElementById("userInput").focus(); };
+    box.appendChild(c);
+  });
+}
+
+function addMsg(html, side, extraActions=null, persist=true){
+  const box = document.getElementById("chatBox");
+  const div = document.createElement("div");
+  div.className = `msg ${side}`;
+  div.innerHTML = html;
+
+  if(extraActions && side==="bot"){
+    const wrap = document.createElement("div");
+    wrap.className = "mini-actions";
+    extraActions.forEach(a=>{
+      const b = document.createElement("button");
+      b.type="button";
+      b.textContent = a.label;
+      b.onclick = ()=> {
+        document.getElementById("userInput").value = a.fill;
+        document.getElementById("userInput").focus();
+      };
+      wrap.appendChild(b);
+    });
+    div.appendChild(wrap);
+  }
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+
+  if(persist) saveChat();
+}
+
+function addTyping(){
+  const html = `<span class="typing">بفكر… <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></span>`;
+  addMsg(html, "bot", null, false);
+  return document.querySelector("#chatBox .msg.bot:last-child");
+}
+function removeTyping(node){
+  if(node && node.parentNode) node.parentNode.removeChild(node);
+}
+
+function handleEnter(e){
+  if(e.key === "Enter") replyLogic();
+}
+
+/* =========================
+   3) أوامر/مساعدة
+========================= */
+function showHelp(){
+  const html = `
+    <b>أوامر سريعة:</b><br>
+    • <b>خلاصة العناية</b> (ملخص سريع)<br>
+    • <b>غير النبات ل: اسم</b> (مثال: غير النبات ل: مونستيرا)<br>
+    • اسأل بأي صيغة: (ازيك؟) (ليه الورق بيصفر؟) (أحطها فين؟) (أروي امتى؟) (حشرات؟) (نقل أصيص؟)<br>
+    <div class="meta-line">معلومة: لو قلت <b>اشرحلي</b> هافتح لك تفاصيل أكتر عن آخر نقطة اتكلمنا فيها.</div>
+  `;
+  addMsg(html, "bot", [
+    {label:"خلاصة العناية", fill:"خلاصة العناية"},
+    {label:"اشرحلي أكتر", fill:"اشرحلي أكتر"},
+    {label:"غير النبات", fill:"غير النبات ل: "}
+  ]);
+}
+
+function showPlantList(){
+  const keys = Object.keys(plantDB);
+  let html = `<b>النباتات المتاحة عندي حالياً (${keys.length}):</b><br>`;
+  html += keys.map(k=>`• ${k}`).join("<br>");
+  html += `<div class="meta-line">لو نباتك مش موجود… اكتب اسمه برضه وهرد عليك بإرشادات عامة وتشخيص للأعراض.</div>`;
+  addMsg(html, "bot", [{label:"غير النبات ل…", fill:"غير النبات ل: "}]);
+}
+
+function clearChat(){
+  const key = getStorageKey();
+  localStorage.removeItem(key);
+  document.getElementById("chatBox").innerHTML = "";
+  welcome();
+}
+
+/* =========================
+   4) تخزين المحادثة
+========================= */
+function getStorageKey(){
+  const name = state.plantKey || state.plantNameFromURL || "عامة";
+  return "nursery_chat_" + normalizeArabic(name);
+}
+
+function saveChat(){
+  const box = document.getElementById("chatBox");
+  const msgs = Array.from(box.querySelectorAll(".msg")).map(m=>({
+    side: m.classList.contains("user") ? "user" : "bot",
+    html: m.innerHTML
+  }));
+  localStorage.setItem(getStorageKey(), JSON.stringify(msgs));
+}
+
+function loadChat(){
+  const raw = localStorage.getItem(getStorageKey());
+  const box = document.getElementById("chatBox");
+  box.innerHTML = "";
+  if(!raw){ welcome(); return; }
+  try{
+    const msgs = JSON.parse(raw);
+    msgs.forEach(m=>{
+      // إعادة بناء الرسالة بدون حفظ تاني
+      const div = document.createElement("div");
+      div.className = `msg ${m.side}`;
+      div.innerHTML = m.html;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+    // لو المحادثة فاضية أو فيها مشكلة
+    if(!box.children.length) welcome();
+  }catch{
+    welcome();
+  }
+}
+
+/* =========================
+   5) “قوة خارقة” في الردود
+========================= */
+function plantChecklist(plantKey){
+  const p = plantDB[plantKey];
+  if(!p) return [
+    "افحص التربة قبل الري: ناشفة = اسقي، طرية = استنى.",
+    "حطها في ضوء مناسب (غير مباشر أفضل لمعظم الداخلي).",
+    "صرف كويس أهم حاجة: فتحات أسفل الأصيص."
+  ];
+  return [
+    `💧 <b>ري:</b> ${p.w}`,
+    `☀️ <b>نور:</b> ${p.s}`,
+    `💊 <b>سماد:</b> ${p.f}`
+  ];
+}
+
+function expandTopic(topic, plantKey){
+  const p = plantDB[plantKey] || null;
+
+  const common = {
+    watering: `
+      <b>تفاصيل الري (بشكل ذكي):</b><br>
+      1) حط صباعك 3-4 سم في التربة: <b>ناشف</b> = اسقي، <b>طرى</b> = استنى.<br>
+      2) اسقي لحد ما المية تنزل من تحت (وبعدها فضّي الطبق).<br>
+      3) <b>علامات قلة الري:</b> ذبول + ورق ناشف/مكرمش.<br>
+      4) <b>علامات زيادة الري:</b> اصفرار + طراوة + ريحة عفن + فطريات.<br>
+      <div class="meta-line">لو تقولي: داخل/خارج + حجم الأصيص + الجو (صيف/شتا) أديك جدول أدق.</div>
+    `,
+    light: `
+      <b>تفاصيل الضوء/المكان:</b><br>
+      • <b>شمس مباشرة</b>: الشمس تقع على الورق (يفضل صباح).<br>
+      • <b>ضوء غير مباشر</b>: المكان منور بدون شمس على الورق.<br>
+      • لو الورق بيحرق/بقع بنية: قلل شمس الضهر.<br>
+      • لو النمو بطيء/ساق طويلة: زوّد الإضاءة تدريجيًا.<br>
+      <div class="meta-line">نصيحة: لف الأصيص كل أسبوع عشان النمو يبقى متوازن.</div>
+    `,
+    fertilize: `
+      <b>تفاصيل التسميد:</b><br>
+      • في الربيع/الصيف: سماد متوازن كل 3-4 أسابيع لمعظم النباتات الداخلية.<br>
+      • في الشتاء: قلل/وقف التسميد للنباتات البطيئة.<br>
+      • <b>زيادة السماد</b> تعمل حروق في أطراف الورق… لو حصل: اغسل التربة بري غزير مرة/مرتين.<br>
+      <div class="meta-line">لو النبات مزهر/مثمر… البوتاسيوم يساعد التزهير.</div>
+    `,
+    symptoms: `
+      <b>تشخيص سريع للأعراض (اختار اللي عندك):</b><br>
+      • <b>اصفرار</b>: غالبًا زيادة ري أو نقص ضوء أو نقص تغذية.<br>
+      • <b>ذبول</b>: قلة ري أو حرارة/شمس زيادة أو جذور مخنوقة.<br>
+      • <b>بقع بنية</b>: شمس حارقة أو فطريات أو أملاح عالية.<br>
+      • <b>ورق بيلف</b>: عطش أو هواء جاف أو برد.<br>
+      <div class="meta-line">قولّي 3 حاجات: (داخل/خارج) + (بتسقي كل قد ايه) + (إضاءة) وهديك تشخيص أدق.</div>
+    `,
+    pests: `
+      <b>حشرات/آفات – خطة إنقاذ:</b><br>
+      1) اعزل النبات عن الباقي.<br>
+      2) امسح الورق بمية وصابون لطيف (أو صابون بوتاسيوم) + اشطف بعد 10 دقائق.<br>
+      3) رش زيت نيم (لو متاح) كل 5-7 أيام لحد ما تختفي.<br>
+      4) قص الأوراق المتضررة جدًا.<br>
+      <div class="meta-line">لو عندك “منّ/بق دقيقي/ذبابة بيضاء” قولي شكل الحشرة وأنا أظبط لك الجرعة والخطوات.</div>
+    `,
+    repot: `
+      <b>نقل/تدوير الأصيص:</b><br>
+      • انقل لما الجذور تملأ الأصيص أو المية تعدّي بسرعة جدًا.<br>
+      • كبر المقاس “درجة واحدة” فقط (مش قفزة كبيرة).<br>
+      • استخدم تربة خفيفة + صرف ممتاز.<br>
+      • بعد النقل: اسقي مرة كويس وبعدين ري معتدل (بلاش تسميد أسبوعين).<br>
+    `,
+    soil: `
+      <b>التربة الصح:</b><br>
+      • قاعدة ذهبية: <b>خفيفة + تصريف</b> (بيتموس/كمبوست + بيرلايت/رمل + شوية تربة).<br>
+      • للصبارات: زوّد رمل/بيرلايت وقلل العضوي.<br>
+      • للسرخس/كالاثيا: زوّد العضوي وحافظ على رطوبة بدون غرق.<br>
+    `,
+    pruning: `
+      <b>تقليم/قص:</b><br>
+      • قص القمم = تفريع وكثافة (خصوصًا أعشاب وشفليرا وبوتس).<br>
+      • شيل الورق الدبلان أول بأول.<br>
+      • استخدم مقص نظيف/معقم.<br>
+    `,
+    propagate: `
+      <b>الإكثار:</b><br>
+      • معظم المتسلقات (بوتس/سنجونيوم/فيلوديندرون): <b>عُقلة</b> في مية أو تربة مع عقدة.<br>
+      • الأعشاب: عُقل أو بذور حسب النوع.<br>
+      • الصبارات/العصاريات: فصل خلفات أو ورقة (حسب النوع) بعد ما تنشف القَطعة.<br>
+    `,
+    toxicity: `
+      <b>السُمية (حيوانات/أطفال):</b><br>
+      • في نباتات داخلية كتير ممكن تهيّج المعدة لو اتاكلت (زي ديفنباخيا وبعض الفيكس).<br>
+      • لو عندك قطط/كلاب: خليك حذر وخلي النبات بعيد، وقلّي اسم النبات وأنا أديك تقييم أقرب.<br>
+    `,
+    summary: `
+      <b>خلاصة سريعة:</b><br>
+      ${plantChecklist(plantKey).join("<br>")}
+      <div class="meta-line">قول “اشرحلي أكتر” لو تحب تفاصيل.</div>
+    `
+  };
+
+  // إضافة لمسة شخصية حسب النبات
+  if(p){
+    if(topic==="summary") return common.summary;
+    if(topic==="watering") return `<b>${p ? "💧 نظام الري للنبات ده:" : ""}</b><br>${p.w}<br><br>${common.watering}`;
+    if(topic==="light") return `<b>☀️ المكان المناسب للنبات ده:</b><br>${p.s}<br><br>${common.light}`;
+    if(topic==="fertilize") return `<b>💊 التسميد للنبات ده:</b><br>${p.f}<br><br>${common.fertilize}`;
+    if(topic==="tips") return `<b>💡 معلومة سريعة:</b><br>${p.n}<br><br>لو تحب: قول “اشرحلي أكتر”.`;
+  }
+
+  return common[topic] || common.summary;
+}
+
+function detectIntent(text){
+  const t = normalizeArabic(text);
+
+  // change plant command
+  const changeMatch = t.match(/^(غير|بدل|حول|خلي|اسال|اسالني)\s*(النبات|الزرعه)?\s*(ل|الى|عن|:)\s*(.+)$/);
+  if(changeMatch && changeMatch[4]){
+    return { intent:"change_plant", value: changeMatch[4].trim() };
+  }
+
+  // list
+  if(/(انواع|الانواع|عندك ايه|قائمه|القائمة|ليست|list)/.test(t)) return {intent:"list"};
+
+  // help
+  if(/(اوامر|مساعده|help|ازاي|تعليمات)/.test(t)) return {intent:"help"};
+
+  // price
+  if(/(سعر|كام|بكام|تمن|بكاب)/.test(t)) return {intent:"price"};
+
+  // greetings
+  if(/^(ازيك|عامل ايه|اهلا|هلا|سلام|السلام عليكم|صباح|مساء|هاي|hello)/.test(t)) return {intent:"greet"};
+
+  // thanks
+  if(/(شكرا|تسلم|حبيبي|merci|thx|متشكر)/.test(t)) return {intent:"thanks"};
+
+  // explain / more
+  if(/(اشرح|تفاصيل|وضح|ليه|ازاي|مزيد|اكتر|more)/.test(t)) return {intent:"explain"};
+
+  // topics
+  const topics = [
+    {k:"watering", re: /(ري|اسقي|اسقيها|اسقيه|ميه|مياه|عطش|سقاية|جدول)/},
+    {k:"light", re: /(شمس|نور|ضوء|مكان|اضاءه|ظل|جوه|برا|بلكونه|شباك)/},
+    {k:"fertilize", re: /(سماد|تسميد|غذا|اكل|npk|حديد|بوتاسيوم|عناصر)/},
+    {k:"soil", re: /(تربه|طين|بيتموس|رمل|بيرلايت|صرف|تصريف)/},
+    {k:"repot", re: /(اصيص|قصريه|وعاء|نقل|تدوير|جذور|كبرت|تغير|تبديل تربة)/},
+    {k:"pests", re: /(حشرات|من|بق|بقع سوداء|بق دقيقي|ذبابه|بيضاء|عنكبوت|سوس|فطريات)/},
+    {k:"symptoms", re: /(اصفر|اصفرار|مصفر|ذابل|ذبول|واقع|بتقع|بقع|بني|اسود|متعفن|ريحه|ملوخيه|مكرمش|ملتفه|بيطرى)/},
+    {k:"pruning", re: /(تقليم|قص|اقص|اقطع|افرع|تفريع|تشذيب)/},
+    {k:"propagate", re: /(اكثار|عقله|عقل|بذور|خلفات|تفصيص|ترقيد|تطعيم)/},
+    {k:"toxicity", re: /(سام|سميه|قطط|كلاب|اطفال|بيبي|ياكل)/},
+    {k:"summary", re: /(خلاصه|ملخص|مختصر|summary)/},
+    {k:"tips", re: /(نصيحه|معلومه|tip|مين|ايه|حلوه|فايده)/},
+  ];
+
+  for(const tp of topics){
+    if(tp.re.test(t)) return {intent:"topic", topic: tp.k};
+  }
+
+  // fallback
+  return {intent:"unknown"};
+}
+
+function greetReply(){
+  const name = state.plantKey || state.plantNameFromURL || "نبات";
+  const checklist = plantChecklist(state.plantKey).slice(0,3);
+
+  return `
+    ازيك يا صاحبي 👋<br>
+    أنا <b>${escapeHTML(name)}</b>، وببقى تمام لما تهتم بيا 😄<br><br>
+    <b>عشان أفضل كويسة اعمل 3 حاجات:</b><br>
+    • ${checklist[0]}<br>
+    • ${checklist[1]}<br>
+    • ${checklist[2]}<br>
+    <div class="meta-line">اسألني بأي طريقة: “ليه ورقي بيصفر؟” أو “أحطك فين؟” أو “امتى أسقي؟”.</div>
+  `;
+}
+
+function priceReply(){
+  return `الأسعار بتتغير حسب <b>الحجم</b> و<b>الموسم</b> 😄<br>
+  شرفنا في المشتل وكابتن محمد هيعمل معاك أحلى واجب! 😉`;
+}
+
+function unknownPlantFallback(userText){
+  // “قوة خارقة” عامة لأي نبات
+  const t = normalizeArabic(userText);
+  let quick = `
+    حاضر! حتى لو نوع الزرعة مش معروف… هديك قاعدة ذهبية تمشي مع 90% من النباتات 🌿<br><br>
+    <b>القواعد العامة:</b><br>
+    • الري: اسقي <b>بعد ما سطح التربة ينشف</b> (الصبارات: بعد ما تنشف تماماً).<br>
+    • الضوء: ضوء قوي <b>غير مباشر</b> أفضل لمعظم الداخلي… وشمس صباح لمعظم الخارجي.<br>
+    • الصرف: فتحات تحت الأصيص + تربة خفيفة = نبات سعيد.<br>
+  `;
+
+  // لو السؤال فيه عرض محدد ندي تشخيص أسرع
+  if(/اصفر|اصفرار|مصفر/.test(t)) quick += `<br><b>بالنسبة للاصفرار:</b> غالباً زيادة ري أو نقص ضوء. جرّب تقلل الري + تزود الإضاءة تدريجيًا.`;
+  if(/ذبل|ذبول|متهدل/.test(t)) quick += `<br><b>بالنسبة للذبول:</b> افحص التربة: لو ناشفة اسقي… لو طرية يبقى زيادة ري/تعفن جذور.`;
+  if(/حشرات|بق|من|ذبابة/.test(t)) quick += `<br><b>بالنسبة للحشرات:</b> امسح الورق بصابون لطيف + عزل + تكرار كل أسبوع.`;
+
+  quick += `<div class="meta-line">لو تقولّي: داخل ولا خارج؟ + بتسقي كل قد ايه؟ + الإضاءة؟ هديك رد “دقيق جداً”.</div>`;
+  return quick;
+}
+
+/* =========================
+   6) المنطق الرئيسي للرد
+========================= */
+function replyLogic(){
+  const input = document.getElementById("userInput");
+  const raw = input.value || "";
+  const text = raw.trim();
+  if(!text) return;
+
+  addMsg(escapeHTML(text), "user");
+  input.value = "";
+
+  const typingNode = addTyping();
+
+  setTimeout(()=>{
+    const intent = detectIntent(text);
+
+    // Change plant
+    if(intent.intent==="change_plant"){
+      const newName = intent.value;
+      const k = findPlantKeyByName(newName) || newName;
+      setPlant(k);
+      removeTyping(typingNode);
+      addMsg(`تمام ✅ حولت الدردشة لـ: <b>${escapeHTML(state.plantKey || state.plantNameFromURL)}</b>.<br>اسألني بقى براحتك.`, "bot", [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"الري", fill:"الري"},
+        {label:"الشمس/المكان", fill:"الشمس/المكان"}
+      ]);
+      return;
+    }
+
+    if(intent.intent==="help"){
+      removeTyping(typingNode);
+      showHelp();
+      return;
+    }
+
+    if(intent.intent==="list"){
+      removeTyping(typingNode);
+      showPlantList();
+      return;
+    }
+
+    // Replies
+    let html = "";
+    let actions = [
+      {label:"اشرحلي أكتر", fill:"اشرحلي أكتر"},
+      {label:"خلاصة العناية", fill:"خلاصة العناية"}
+    ];
+
+    if(intent.intent==="price"){
+      html = priceReply();
+      state.lastTopic = "price";
+    }
+    else if(intent.intent==="thanks"){
+      html = "العفو يا غالي! نورتنا 💚<div class='meta-line'>لو احتجت أي حاجة عن الري/الشمس/الأعراض أنا موجود.</div>";
+      state.lastTopic = "thanks";
+    }
+    else if(intent.intent==="greet"){
+      html = greetReply();
+      state.lastTopic = "greet";
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"اشرحلي أكتر", fill:"اشرحلي أكتر"},
+        {label:"عندي اصفرار", fill:"ورقي بيصفر… ايه الحل؟"}
+      ];
+    }
+    else if(intent.intent==="explain"){
+      // يشرح آخر نقطة
+      const topic = state.lastTopic || "summary";
+      if(state.plantKey){
+        html = expandTopic(topic, state.plantKey);
+      }else{
+        html = expandTopic(topic, null);
+      }
+      actions = [
+        {label:"أعراض (اصفرار/ذبول)", fill:"عندي اصفرار وذبول"},
+        {label:"حشرات", fill:"في حشرات على الورق"},
+        {label:"نقل أصيص", fill:"امتى أنقل الأصيص؟"}
+      ];
+    }
+    else if(intent.intent==="topic"){
+      state.lastTopic = intent.topic;
+      if(state.plantKey){
+        html = expandTopic(intent.topic, state.plantKey);
+      }else{
+        // لو النبات مش معروف: رد عام + توسعة للموضوع
+        if(intent.topic==="summary") html = expandTopic("summary", null);
+        else html = expandTopic(intent.topic, null) + "<br><br>" + unknownPlantFallback(text);
+      }
+      actions = [
+        {label:"اشرحلي أكتر", fill:"اشرحلي أكتر"},
+        {label:"سؤال تاني", fill:"طيب لو الورق بيصفر؟"},
+        {label:"غير النبات", fill:"غير النبات ل: "}
+      ];
+    }
+    else {
+      // unknown intent -> “قوة خارقة” عامة + محاولات فهم
+      state.lastTopic = "unknown";
+      html = state.plantKey
+        ? `تمام… فهمت سؤالك بشكل عام ✅<br><br>${unknownPlantFallback(text)}`
+        : unknownPlantFallback(text);
+
+      actions = [
+        {label:"الري", fill:"امتى أسقي؟"},
+        {label:"الشمس/المكان", fill:"أحطها فين؟"},
+        {label:"اشرحلي أكتر", fill:"اشرحلي أكتر"}
+      ];
+    }
+
+    removeTyping(typingNode);
+    addMsg(html, "bot", actions);
+  }, 650);
+}
+
+/* =========================
+   7) ترحيب أول مرة
+========================= */
+function welcome(){
+  const display = state.plantKey || state.plantNameFromURL || "عامة";
+  let html = `يا أهلاً 👋 أنا <b>${escapeHTML(display)}</b>.<br>`;
+  if(state.plantKey){
+    html += `اسألني بأي أسلوب: <b>ازيك؟</b> / <b>امتى أسقي؟</b> / <b>أحطك فين؟</b> / <b>ليه الورق بيصفر؟</b>`;
+  }else{
+    html += `حتى لو اسم النبات مش مضبوط… هساعدك بإرشادات عامة وتشخيص للأعراض 🌿`;
+  }
+  html += `<div class="meta-line">تقدر كمان تقول: “غير النبات ل: نعناع”</div>`;
+
+  addMsg(html, "bot", [
+    {label:"ازيك؟", fill:"ازيك؟"},
+    {label:"خلاصة العناية", fill:"خلاصة العناية"},
+    {label:"ورقي بيصفر", fill:"ليه الورق بيصفر؟"}
+  ]);
+}
+
+/* =========================
+   8) Voice (اختياري)
+========================= */
+function toggleVoice(){
+  const btn = document.getElementById("voiceBtn");
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    addMsg("للأسف المتصفح ده مش بيدعم الإملاء الصوتي 😅", "bot");
+    return;
+  }
+
+  if(!state.recognition){
+    state.recognition = new SpeechRecognition();
+    state.recognition.lang = "ar-EG";
+    state.recognition.interimResults = false;
+    state.recognition.maxAlternatives = 1;
+
+    state.recognition.onresult = (event)=>{
+      const transcript = event.results?.[0]?.[0]?.transcript || "";
+      document.getElementById("userInput").value = transcript;
+      btn.classList.remove("active");
+      state.voiceOn = false;
     };
+    state.recognition.onerror = ()=>{
+      btn.classList.remove("active");
+      state.voiceOn = false;
+    };
+    state.recognition.onend = ()=>{
+      btn.classList.remove("active");
+      state.voiceOn = false;
+    };
+  }
 
-    function addMsg(text, side) {
-        const box = document.getElementById('chatBox');
-        const div = document.createElement('div');
-        div.className = `msg ${side}`;
-        div.innerHTML = text;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    }
+  if(state.voiceOn){
+    state.recognition.stop();
+    state.voiceOn = false;
+    btn.classList.remove("active");
+  }else{
+    state.recognition.start();
+    state.voiceOn = true;
+    btn.classList.add("active");
+  }
+}
 
-    setTimeout(() => {
-        let welcome = `يا أهلاً! أنا <b>${pType}</b>. 👋<br>`;
-        if (plantDB[pType]) {
-            welcome += `أنا عارفة كل أسراري.. اسألني عن الري أو المكان المناسب!`;
-        } else {
-            welcome += `أنا جاهزة أساعدك بأي معلومة عامة عن الزرع!`;
-        }
-        addMsg(welcome, 'bot');
-    }, 500);
+/* =========================
+   9) Start
+========================= */
+(function init(){
+  const params = new URLSearchParams(window.location.search);
+  const rawType = params.get("type") || "عامة";
+  const pType = rawType.replace(/_/g," ");
+  setPlant(pType);
 
-    function handleEnter(e) { if (e.key === 'Enter') replyLogic(); }
-
-    function replyLogic() {
-        const input = document.getElementById('userInput');
-        const text = input.value.trim().toLowerCase();
-        if (!text) return;
-
-        addMsg(text, 'user');
-        input.value = "";
-
-        setTimeout(() => {
-            const info = plantDB[pType];
-            let reply = "بصراحة سؤالك محتاج خبير، بس اسألني عن الري أو الشمس.";
-
-            if (text.includes("سعر") || text.includes("كام") || text.includes("بكاب")) {
-                reply = "الأسعار بتتغير كل يوم وحسب الحجم.. شرفنا في المشتل وكابتن محمد هيعمل معاك أحلى واجب! 😉";
-            }
-            else if (text.includes("شكرا") || text.includes("حبيبي")) {
-                reply = "العفو يا غالي! نورتنا 💚";
-            }
-            else if (info) {
-                // لو الزرعة معروفة في القاعدة
-                if (text.includes("مية") || text.includes("ري") || text.includes("اسقي")) 
-                    reply = `💧 <b>نظام الري:</b> ${info.w}`;
-                else if (text.includes("شمس") || text.includes("نور") || text.includes("ضوء") || text.includes("مكان")) 
-                    reply = `☀️ <b>المكان المناسب:</b> ${info.s}`;
-                else if (text.includes("سماد") || text.includes("اكل") || text.includes("غذا")) 
-                    reply = `💊 <b>التسميد:</b> ${info.f}`;
-                else if (text.includes("نصيحة") || text.includes("معلومة") || text.includes("مين")) 
-                    reply = `💡 <b>معلومة عالماشي:</b> ${info.n}`;
-                else 
-                    reply = `أنا تحت أمرك! اسألني عن: <b>الري، الشمس، التسميد</b>.`;
-            } 
-            else {
-                // رد عام لو الزرعة مش في القائمة
-                if (text.includes("مية")) reply = "القاعدة العامة: حط صباعك في التربة، لو ناشفة اسقي، لو طرية استنى.";
-                else if (text.includes("شمس")) reply = "معظم الزرع بيحب ضوء قوي، بس بلاش شمس الضهر الحارقة.";
-                else reply = "يا ريت تتأكد من اسم الزرعة في الرابط، أو اسألني سؤال عام.";
-            }
-
-            addMsg(reply, 'bot');
-        }, 600);
-    }
+  // رسالة صغيرة: لو المستخدم كتب "عن نبات X" بدون أمر
+  // هتشتغل تلقائيًا مع fuzzy match لما يكتب "غير النبات ل: X"
+})();
 </script>
 </body>
 </html>
