@@ -17,59 +17,69 @@
     </style>
 </head>
 <body>
-<div class="header" id="pTitle">دردشة النبتة</div>
+
+<div class="header" id="plantTitle">دردشة مع نبتتك</div>
 <div id="chatBox"></div>
+
 <div class="input-area">
     <input type="text" id="userInput" placeholder="اسألني أي حاجة...">
-    <button onclick="sendMsg()">إرسال</button>
+    <button id="sendBtn" onclick="askAI()">إرسال</button>
 </div>
 
 <script>
+    // المفتاح الجديد بتاعك يا محمد
+    const API_KEY = "AIzaSyBYuDzE05mcTjRn6y9OC3UQbH6ppD4OXL4"; 
+
     const params = new URLSearchParams(window.location.search);
     const pType = params.get('type') || 'جميلة';
-    document.getElementById('pTitle').innerText = "دردشة مع: " + pType;
-AIzaSyBYuDzE05mcTjRn6y9OC3UQbH6ppD4OXL4
-    // عقل الزرعة المتخزن (الردود اللي هتخلي الزبون ينبهر)
-    const plantBrain = {
-        "ريحان": "يا أهلاً يا فنان! أنا الريحان، ريحتي تملا البيت خير. اسقيني كل يوم رشة خفيفة وحطني في الشمس وهدلعك!",
-        "ياسمين": "يا مساء الجمال، أنا الياسمينة البلدي. بحب الدلع والمية بانتظام، وخليني في مكان منور عشان أفتح وأطلع ريحتي.",
-        "صبار": "أنا الصبار يا باشا، ملك التحمل. متتعبش نفسك في سقيي كتير، مرة كل أسبوعين كفاية، وارميني في الشمس ومتقلقش.",
-        "ورد_أحمر": "أنا الورد البلدي الأحمر، رمز الحب. اسقيني يوم ويوم وخليني في الشمس عشان وردي يفضل منور.",
-        "ورد_أصفر": "أنا الورد الأصفر الجميل، بحب الشمس جداً والمية المعتدلة. نورت بيتك الجديد!"
-    };
+    document.getElementById('plantTitle').innerText = "دردشة مع نبتة: " + pType;
 
     function addMsg(text, side) {
+        const box = document.getElementById('chatBox');
         const div = document.createElement('div');
         div.className = `msg ${side}`;
         div.innerText = text;
-        document.getElementById('chatBox').appendChild(div);
-        document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
     }
 
-    addMsg(`يا أهلاً بيك! أنا نبتة ${pType}، وصاحبي محمد بعتني ليك عشان أدردش معاك. عايز تعرف عني إيه؟`, 'bot');
+    addMsg(`يا أهلاً بيك! أنا نبتة ${pType}، وصاحبي محمد بعتني ليك عشان أدردش معاك. عايز تسألني عن إيه؟`, 'bot');
 
-    function sendMsg() {
+    async function askAI() {
         const input = document.getElementById('userInput');
-        const text = input.value.trim();
-        if (!text) return;
+        const btn = document.getElementById('sendBtn');
+        const prompt = input.value.trim();
+        if (!prompt) return;
 
-        addMsg(text, 'user');
+        addMsg(prompt, 'user');
         input.value = "";
+        btn.innerText = "...";
+        btn.disabled = true;
 
-        setTimeout(() => {
-            let reply = "والله يا صاحبي أنا لسه بزرع وبكبر وفهمي على قدي، بس اللي أعرفه إنك لو سقيتني واهتميت بيا هبقى زي الفل!";
-            
-            // ردود ذكية بناءً على السؤال
-            if (text.includes("مية") || text.includes("اسقيكي") || text.includes("أشرب")) {
-                reply = pType.includes("صبار") ? plantBrain["صبار"] : "اسقيني لما تلاقي تربتي نشفت شوية، ومتحطش مية كتير عشان جذوري متتعبش.";
-            } else if (text.includes("شمس") || text.includes("نور") || text.includes("أتحط فين")) {
-                reply = "أنا بعشق الضوء، حطني في أكتر مكان منور في البيت عندك.";
-            } else if (plantBrain[pType]) {
-                reply = plantBrain[pType];
+        try {
+            // ربط حقيقي بموديل Gemini
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `أنت نبتة من نوع ${pType}. رد بمصرية عامية، بأسلوب مرح وشخصي كأنك كائن حي. السؤال: ${prompt}` }] }]
+                })
+            });
+
+            const data = await response.json();
+            if (data.candidates && data.candidates[0].content) {
+                const reply = data.candidates[0].content.parts[0].text;
+                addMsg(reply, 'bot');
+            } else {
+                addMsg("أنا محتاجة شوية تركيز، اسألني تاني كدة؟", 'bot');
             }
-            
-            addMsg(reply, 'bot');
-        }, 800);
+        } catch (error) {
+            addMsg("النت مهنج عندي شوية، جرب كمان دقيقة.", 'bot');
+        }
+
+        btn.innerText = "إرسال";
+        btn.disabled = false;
     }
 </script>
 </body>
