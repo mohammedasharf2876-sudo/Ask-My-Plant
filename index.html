@@ -1,329 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشتل محمد الذكي</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #efe7dd; /* لون خلفية واتساب */
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-        }
-
-        .header { 
-            background-color: #008069; 
-            color: white; 
-            padding: 10px 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            z-index: 100;
-        }
-        
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .chat-area { 
-            flex: 1; 
-            padding: 20px; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
-            background-repeat: repeat;
-        }
-
-        .message { 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            max-width: 80%; 
-            font-size: 14.2px; 
-            line-height: 19px; 
-            position: relative; 
-            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
-            word-wrap: break-word;
-        }
-
-        .bot { 
-            background: white; 
-            align-self: flex-start; 
-            border-top-left-radius: 0; 
-        }
-
-        .user { 
-            background: #d9fdd3; 
-            align-self: flex-end; 
-            border-top-right-radius: 0; 
-        }
-
-        .time {
-            font-size: 11px;
-            color: #999;
-            float: left;
-            margin-top: 4px;
-            margin-right: -5px;
-        }
-
-        .input-box { 
-            background: #f0f2f5; 
-            padding: 10px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-        }
-
-        input { 
-            flex: 1; 
-            padding: 12px; 
-            border-radius: 8px; 
-            border: none; 
-            outline: none; 
-            font-size: 16px; 
-            background: white;
-        }
-
-        button { 
-            background: #008069; 
-            color: white; 
-            border: none; 
-            padding: 10px; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            width: 40px; 
-            height: 40px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <div class="avatar">🌱</div>
-        <div style="flex: 1;">
-            <div style="font-weight: bold; font-size: 16px;" id="headerName">مشتل محمد</div>
-            <div style="font-size: 12px; opacity: 0.8;">متصل الآن</div>
-        </div>
-    </div>
-
-    <div class="chat-area" id="chatBox"></div>
-
-    <div class="input-box">
-        <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="handleEnter(event)">
-        <button onclick="sendMessage()">➤</button>
-    </div>
-
-<script>
-    // --- قاعدة البيانات الكاملة ---
-    const plantDB = {
-        "عامة": { w: "معظم النباتات بتحب التربة تجف شوية قبل الري.", s: "أغلب النباتات بتحتاج ضوء قوي غير مباشر.", f: "سماد NPK متوازن مرة كل شهر ممتاز.", n: "أنا مهندس زراعي آلي، اسألني في العموم!" },
-        "ريحان": { w: "يوم ويوم (بيحب المية)", s: "شمس مباشرة ومكان متهوي", f: "عضوي كل شهر", n: "اقطف القمم النامية عشان يفرع." },
-        "نعناع": { w: "كل يوم في الصيف", s: "شمس خفيفة أو نصف ظل", f: "NPK متوازن", n: "جذوره قوية، ازرعه لوحده." },
-        "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة", f: "قليل جداً", n: "ممتاز في الطبخ." },
-        "زعتر": { w: "قليل جداً", s: "شمس كاملة", f: "مرة كل موسم", n: "بيتحمل العطش." },
-        "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس 6 ساعات عالأقل", f: "عالي البوتاسيوم", n: "قص الورد الدبلان." },
-        "فل": { w: "كل يومين", s: "شمس مغربلة", f: "حديد كل شهر", n: "ريحته بتطلع بليل." },
-        "ياسمين": { w: "معتدل", s: "شمس كاملة", f: "متوازن", n: "نبات متسلق." },
-        "جاردينيا": { w: "مية فلتر (بدون كلور)", s: "ضوء قوي جداً بدون شمس", f: "حديد وسماد حامضي", n: "حساسة لتغيير المكان." },
-        "مسك الليل": { w: "يوم ويوم", s: "شمس مباشرة", f: "بلدي", n: "ريحته فواحة جداً." },
-        "جهنمية": { w: "تعطيش عشان تزهر", s: "شمس حارقة", f: "مش محتاجة", n: "ملكة الشمس." },
-        "بوتس": { w: "كل 5 أيام (لما تنشف)", s: "ضل (ضوء شباك)", f: "ورقي", n: "منقي للهواء." },
-        "جلد النمر": { w: "كل أسبوعين مرة", s: "أي إضاءة", f: "مش محتاج", n: "بيستحمل الإهمال." },
-        "زاميا": { w: "مرة كل 20 يوم", s: "ضل كامل", f: "NPK كل شهرين", n: "شيك جداً وبطيئة النمو." },
-        "مونستيـرا": { w: "لما نص التربة ينشف", s: "ضوء ساطع", f: "NPK", n: "امسح ورقها بقماشة مبلولة." },
-        "صبار": { w: "نقطة كل شهر", s: "شمس أو ضوء قوي", f: "لا يوجد", n: "مبيموتش غير من كتر المية." },
-        "الوفيرا": { w: "كل 3 أسابيع", s: "شمس خفيفة", f: "سنوي", n: "مفيد للبشرة." },
-        "فيكس نتدا": { w: "يوم ويوم", s: "شمس", f: "نيتروجين", n: "بيتعمل سور." },
-        "ليمون": { w: "منتظم", s: "شمس كاملة", f: "حديد", n: "محتاج شمس وتسميد عشان يطرح." }
-    };
-
-    // تحديد نوع الزرعة من الرابط
-    const params = new URLSearchParams(window.location.search);
-    let pType = params.get('type');
-    
-    // تصحيح الخطأ الغبي: لو مفيش نوع، اعتبره "عامة"
-    if (!pType) {
-        pType = "عامة";
-    } else {
-        pType = pType.replace(/_/g, ' ');
-    }
-
-    document.getElementById('headerName').innerText = pType === "عامة" ? "مشتل محمد الذكي" : "نبتة: " + pType;
-
-    // دالة إضافة الرسالة
-    function addMsg(text, side) {
-        const box = document.getElementById('chatBox');
-        const div = document.createElement('div');
-        div.className = `message ${side}`;
-        const t = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        div.innerHTML = `${text} <span class="time">${t}</span>`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    }
-
-    // رسالة الترحيب
-    setTimeout(() => {
-        let welcome = "";
-        if (pType === "عامة") {
-            welcome = "أهلاً يا فنان! 👋<br>أنا المساعد الذكي لمشتل محمد. اسألني أي سؤال عن الزرع وهجاوبك.";
-        } else {
-            welcome = `أهلاً! أنا نبتة <b>${pType}</b>. 👋<br>اسألني عن الري أو المكان المناسب!`;
-        }
-        addMsg(welcome, 'bot');
-    }, 500);
-
-    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
-
-    function sendMessage() {
-        const input = document.getElementById('userInput');
-        const text = input.value.trim().toLowerCase();
-        if (!text) return;
-
-        addMsg(text, 'user');
-        input.value = "";
-
-        setTimeout(() => {
-            const info = plantDB[pType] || plantDB["عامة"]; // لو الزرعة مش موجودة، استخدم العامة
-            let reply = "";
-
-            // الردود العامة (تعمل مع كل الأنواع)
-            if (text.includes("سعر") || text.includes("كام") || text.includes("بكاب")) {
-                reply = "الأسعار مميزة جداً عندنا.. شرفنا في المشتل وكابتن محمد هيعمل معاك الواجب! 😉";
-            }
-            else if (text.includes("ازيك") || text.includes("اخبارك") || text.includes("عامل")) {
-                reply = "أنا زي الفل طول ما إنت مهتم بالزرع! 🌿";
-            }
-            else if (text.includes("شكرا") || text.includes("حبيبي")) {
-                reply = "العفو يا غالي! 💚";
-            }
-            // الردود الخاصة بالزراعة
-            else if (text.includes("مية") || text.includes("ري") || text.includes("اسقي") || text.includes("شرب")) {
-                reply = `💧 <b>الري:</b> ${info.w}`;
-            }
-            else if (text.includes("شمس") || text.includes("نور") || text.includes("مكان") || text.includes("ضوء")) {
-                reply = `☀️ <b>المكان:</b> ${info.s}`;
-            }
-            else if (text.includes("سماد") || text.includes("اكل") || text.includes("غذا")) {
-                reply = `💊 <b>التسميد:</b> ${info.f}`;
-            }
-            else if (text.includes("نصيحة") || text.includes("معلومة")) {
-                reply = `💡 <b>خد دي:</b> ${info.n}`;
-            }
-            else {
-                // الرد الافتراضي لو مفهمش السؤال (بدل رسالة الخطأ)
-                if (pType === "عامة") {
-                    reply = "سؤال جميل! بس أنا تخصصي في الري والشمس والتسميد. اسألني في دول.";
-                } else {
-                    reply = `ممكن توضح أكتر؟ اسألني مثلاً: "اسقيكي إزاي؟" أو "بتحبي الشمس؟"`;
-                }
-            }
-
-            addMsg(reply, 'bot');
-        }, 500);
-    }
-</script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشتل محمد الذكي</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #efe7dd; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-        }
-        .header { 
-            background-color: #008069; 
-            color: white; 
-            padding: 10px 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            z-index: 100;
-        }
-        .avatar {
-            width: 40px; height: 40px; background: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
-        }
-        .chat-area { 
-            flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; 
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
-        }
-        .message { 
-            padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14.2px; line-height: 19px; 
-            position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word;
-        }
-        .bot { background: white; align-self: flex-start; border-top-left-radius: 0; }
-        .user { background: #d9fdd3; align-self: flex-end; border-top-right-radius: 0; }
-        .time { font-size: 11px; color: #999; float: left; margin-top: 4px; margin-right: -5px; }
-        .input-box { background: #f0f2f5; padding: 10px; display: flex; align-items: center; gap: 8px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; outline: none; font-size: 16px; background: white; }
-        button { background: #008069; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <div class="avatar">🌱</div>
-        <div style="flex: 1;">
-            <div style="font-weight: bold; font-size: 16px;" id="headerName">مشتل محمد</div>
-            <div style="font-size: 12px; opacity: 0.8;">متصل الآن</div>
-        </div>
-    </div>
-
-    <div class="chat-area" id="chatBox"></div>
-
-    <div class="input-box">
-        <input type="text" id="userInput" placeholder="اكتب رسالة..." onkeypress="handleEnter(event)">
-        <button onclick="sendMessage()">➤</button>
-    </div>
-
-<script>
-    // --- قاعدة بيانات الـ 50 زرعة كاملة ---
-    const plantDB = {
-        // --- 1. عطريات وأعشاب ---
-        "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
-        "نعناع": { w: "كل يوم في الصيف (بيحب المية)", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
-        "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة (بيتحمل)", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
-        "زعتر": { w: "قليل جداً (بيكره المية الكتير)", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-        "لافندر": { w: "لما التربة تجف (بيكره الرطوبة)", s: "شمس قوية جداً", f: "قليل جداً", n: "ريحته مهدئة وبيحب الجو الجاف." },
-        "نعناع سعودي": { w: "مية كتير (زي البلدي)", s: "نصف ظل", f: "عضوي", n: "ورقته صغيرة وريحته أقوى." },
-        "بردقوش": { w: "معتدل", s: "شمس", f: "متوازن", n: "مفيد جداً للمعدة." },
-        "عطر شان": { w: "يوم ويوم", s: "شمس خفيفة", f: "عضوي", n: "ورقه بيتحط في الشاي بيدي ريحة تحفة." },
-
-        // --- 2. زهور ومزهرات ---
-        "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات عالأقل", f: "NPK عالي البوتاسيوم عشان يزهر", n: "قص الورد الدبلان أول بأول عشان يطلع جديد." },
-        "فل": { w: "كل يومين (تربة رطبة)", s: "شمس مغربلة (مش حارقة)", f: "حديد كل شهر عشان الورق ميصفرش", n: "ريحته فواحة جداً وقت الغروب." },
-        "ياسمين": { w: "معتدل (لما الوش ينشف)", s: "شمس كاملة", f: "سماد متوازن", n: "نبات متسلق، محتاج دعامة يسند عليها." },
-        "جاردينيا": { w: "مية خالية من الكلور (فلتر)", s: "ضوء قوي جداً بس مش شمس مباشرة", f: "حديد وسماد حامضي", n: "دلوعة المشتل، بتزعل لو مكانها اتغير." },
-        "مسك الليل": { w: "يوم ويوم", s: "شمس مباشرة", f: "سماد بلدي", n: "ريحته بتملأ الشارع كله بليل." },
-        "جهنمية": { w: "تعطيش عشان تزهر (قليل)", s: "شمس حارقة طول اليوم", f: "مش محتاجة دلع", n: "كل ما تنشف عليها المية تطلع ورد أكتر." },
-        "هايبسكس": { w: "يوم ويوم في الصيف", s: "شمس مباشرة", f: "NPK كل أسبوعين", n: "زهرتها بتعيش يوم واحد بس شكلها روعة." },
-        "ونكا": { w: "كل يوم في الحر", s: "شمس أو نصف ظل", f: "NPK متعادل", n: "أقوى نبات مزهر بيستحمل حرارة مصر." },
-        "جارونيا": { w: "معتدل", s: "شمس
 
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
