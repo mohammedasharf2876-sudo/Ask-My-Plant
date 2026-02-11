@@ -5,31 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مشتل محمد الذكي</title>
     <style>
-        /* تصميم احترافي ونضيف جداً */
-        * { box-sizing: border-box; }
+        /* إعدادات الخطوط والألوان */
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background-color: #f0f2f5; 
             margin: 0; 
             display: flex; 
             flex-direction: column; 
             height: 100vh; 
         }
-        
-        /* الهيدر */
+
+        /* الهيدر الأخضر الشيك */
         .header { 
-            background-color: #008069; /* لون الواتساب البيزنس */
+            background-color: #008069; 
             color: white; 
-            padding: 15px 20px; 
+            padding: 15px; 
             display: flex; 
             align-items: center; 
-            gap: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            z-index: 10;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .header-icon { font-size: 24px; }
-        .header-info h1 { margin: 0; font-size: 18px; font-weight: 600; }
-        .header-info p { margin: 2px 0 0; font-size: 12px; opacity: 0.9; }
+        .header h1 { font-size: 18px; margin: 0; font-weight: bold; }
+        .header p { font-size: 12px; margin: 0; opacity: 0.9; }
+        .status-dot { width: 10px; height: 10px; background: #25d366; border-radius: 50%; border: 2px solid white; }
 
         /* منطقة الشات */
         #chatBox { 
@@ -38,51 +36,49 @@
             overflow-y: auto; 
             display: flex; 
             flex-direction: column; 
-            gap: 15px; 
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); /* خلفية واتساب */
-            background-color: #e5ddd5;
+            gap: 10px; 
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+            background-repeat: repeat;
         }
 
-        /* الرسائل */
+        /* فقاعات الرسائل */
         .msg { 
-            padding: 10px 15px; 
+            padding: 10px 14px; 
             border-radius: 8px; 
             max-width: 80%; 
             font-size: 15px; 
-            line-height: 1.5; 
+            line-height: 1.4; 
             position: relative; 
             box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            word-wrap: break-word;
         }
         .bot { 
             background: white; 
             align-self: flex-start; 
             border-top-left-radius: 0; 
-            color: #111b21;
         }
         .user { 
-            background: #d9fdd3; 
+            background: #dcf8c6; 
             align-self: flex-end; 
             border-top-right-radius: 0; 
-            color: #111b21;
         }
-        .time { font-size: 10px; color: #999; margin-top: 5px; text-align: left; display: block; }
+        .time { font-size: 10px; color: #999; margin-top: 4px; display: block; text-align: left; }
 
         /* منطقة الكتابة */
         .input-area { 
             background: #f0f2f5; 
             padding: 10px; 
             display: flex; 
-            align-items: center; 
             gap: 10px; 
+            align-items: center;
         }
         input { 
             flex: 1; 
             padding: 12px 20px; 
-            border: none; 
             border-radius: 25px; 
+            border: none; 
             outline: none; 
-            font-size: 15px; 
-            background: white;
+            font-size: 16px; 
         }
         button { 
             background: #008069; 
@@ -96,37 +92,35 @@
             display: flex; 
             align-items: center; 
             justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        button svg { width: 20px; height: 20px; fill: white; }
+        button:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="header-icon">🌱</div>
-        <div class="header-info">
+        <div style="font-size: 24px;">🌱</div>
+        <div>
             <h1 id="plantTitle">مشتل محمد الذكي</h1>
-            <p>مساعدك الشخصي للعناية بالنباتات</p>
+            <p>متصل الآن • يرد فوراً</p>
         </div>
     </div>
 
     <div id="chatBox"></div>
 
     <div class="input-area">
-        <input type="text" id="userInput" placeholder="اسألني عن الري، الشمس، التسميد..." onkeypress="handleEnter(event)">
-        <button onclick="replyLogic()">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
+        <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="handleEnter(event)">
+        <button onclick="replyLogic()">➤</button>
     </div>
 
 <script>
-    // --- قاعدة بيانات الـ 50 زرعة (نفس اللي كانت شغالة) ---
+    // --- المخ (قاعدة البيانات اللي كانت شغالة معاك) ---
     const plantDB = {
         "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
         "نعناع": { w: "كل يوم في الصيف", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
         "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
         "زعتر": { w: "قليل جداً", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-        "لافندر": { w: "لما التربة تجف", s: "شمس قوية جداً", f: "قليل جداً", n: "ريحته مهدئة وبيحب الجو الجاف." },
         "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات", f: "NPK عالي البوتاسيوم", n: "قص الورد الدبلان أول بأول." },
         "فل": { w: "كل يومين", s: "شمس مغربلة", f: "حديد كل شهر", n: "ريحته فواحة وقت الغروب." },
         "ياسمين": { w: "معتدل", s: "شمس كاملة", f: "سماد متوازن", n: "نبات متسلق، محتاج دعامة." },
@@ -144,37 +138,31 @@
         "ليمون": { w: "منتظم", s: "شمس كاملة", f: "حديد وعناصر صغرى", n: "عشان تطرح لازم شمس." }
     };
 
-    // إعدادات الصفحة
+    // إعداد الصفحة
     const params = new URLSearchParams(window.location.search);
     const rawType = params.get('type') || 'عامة';
     const pType = rawType.replace(/_/g, ' '); 
-    document.getElementById('plantTitle').innerText = "دردشة مع: " + pType;
+    document.getElementById('plantTitle').innerText = "مشتل محمد: " + pType;
 
-    // دالة إضافة الرسائل
+    // دالة إضافة الرسالة
     function addMsg(text, side) {
         const box = document.getElementById('chatBox');
         const div = document.createElement('div');
         div.className = `msg ${side}`;
-        
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        div.innerHTML = `${text} <span class="time">${time}</span>`;
-        
+        const t = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        div.innerHTML = `${text} <span class="time">${t}</span>`;
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
     }
 
-    // رسالة الترحيب
+    // الترحيب
     setTimeout(() => {
-        let welcome = `أهلاً يا فنان! 👋<br>أنا نبتة <b>${pType}</b> من مشتل محمد.`;
-        if (plantDB[pType]) {
-            welcome += `<br>أنا جاهزة أقولك إزاي تهتم بيا وتخليني منورة! اسألني عن الري أو الشمس.`;
-        } else {
-            welcome += `<br>أنا تحت أمرك في أي سؤال عام عن الزرع.`;
-        }
+        let welcome = `أهلاً بيك يا فنان! 👋<br>أنا نبتة <b>${pType}</b>.`;
+        if (plantDB[pType]) welcome += `<br>اسألني عن الري أو المكان المناسب عشان أكبر عندك.`;
+        else welcome += `<br>أنا جاهزة لأي سؤال عام عن الزرع.`;
         addMsg(welcome, 'bot');
     }, 500);
 
-    // التعامل مع الإدخال
     function handleEnter(e) { if (e.key === 'Enter') replyLogic(); }
 
     function replyLogic() {
@@ -185,33 +173,32 @@
         addMsg(text, 'user');
         input.value = "";
 
-        // محاكاة التفكير والرد
+        // الرد الذكي
         setTimeout(() => {
             const info = plantDB[pType];
-            let reply = "سؤال جميل! بس خليني أكلمك عن الري والشمس أحسن.";
+            let reply = "بصراحة سؤال ذكي، بس خليني أكلمك عن الري والشمس.";
 
             if (text.includes("سعر") || text.includes("كام") || text.includes("فلوس")) {
-                reply = "الأسعار بتتغير حسب المقاس.. شرفنا في المشتل وهنعمل معاك أحلى واجب! 😉";
+                reply = "الأسعار في المشتل بتتغير.. عدي علينا وكابتن محمد هيظبطك! 😉";
             }
-            else if (text.includes("شكرا") || text.includes("حبيبي")) {
-                reply = "العفو يا غالي! نورتنا 💚";
+            else if (text.includes("شكرا") || text.includes("تسلم")) {
+                reply = "حبيبي يا غالي! 💚";
             }
             else if (info) {
                 if (text.includes("مية") || text.includes("ري") || text.includes("اسقي")) 
-                    reply = `💧 <b>نظام الري:</b> ${info.w}`;
-                else if (text.includes("شمس") || text.includes("نور") || text.includes("ضوء") || text.includes("مكان")) 
-                    reply = `☀️ <b>المكان المناسب:</b> ${info.s}`;
-                else if (text.includes("سماد") || text.includes("اكل") || text.includes("غذا")) 
+                    reply = `💧 <b>الري:</b> ${info.w}`;
+                else if (text.includes("شمس") || text.includes("نور") || text.includes("مكان")) 
+                    reply = `☀️ <b>المكان:</b> ${info.s}`;
+                else if (text.includes("سماد") || text.includes("اكل")) 
                     reply = `💊 <b>التسميد:</b> ${info.f}`;
                 else 
-                    reply = `💡 <b>نصيحة ذهبية:</b> ${info.n}`;
+                    reply = `💡 <b>نصيحة:</b> ${info.n}`;
             } 
             else {
-                if (text.includes("مية")) reply = "القاعدة العامة: حط صباعك في التربة، لو ناشفة اسقي، لو طرية استنى.";
-                else if (text.includes("شمس")) reply = "معظم الزرع بيحب ضوء قوي، بس بلاش شمس الضهر الحارقة.";
-                else reply = "يا ريت تتأكد من اسم الزرعة في الرابط، أو اسألني سؤال عام.";
+                if (text.includes("مية")) reply = "اختبر التربة بصباعك، لو ناشفة اسقي.";
+                else if (text.includes("شمس")) reply = "معظم الزرع بيحب ضوء قوي بعيد عن شمس الضهر.";
+                else reply = "يا ريت تتأكد إنك فاتح الرابط الصح من الباركود.";
             }
-
             addMsg(reply, 'bot');
         }, 600);
     }
