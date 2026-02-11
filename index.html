@@ -3,36 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دردشة نبتتي الذكية</title>
+    <title>دردشة زرعتي الذكية</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e5ddd5; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { background: #075e54; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; }
-        #chatBox { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 15px; max-width: 85%; font-size: 15px; line-height: 1.4; position: relative; }
-        .bot { background: white; align-self: flex-start; color: #000; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user { background: #dcf8c6; align-self: flex-end; color: #000; }
-        .input-area { background: #f0f0f0; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; }
-        input { flex: 1; padding: 12px; border: none; border-radius: 25px; outline: none; font-size: 16px; }
-        button { background: #075e54; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        .header { background: #075e54; color: white; padding: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #chatBox { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 80%; font-size: 15px; line-height: 1.5; position: relative; }
+        .bot { background: white; align-self: flex-start; color: #333; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-bottom-right-radius: 2px; }
+        .user { background: #dcf8c6; align-self: flex-end; color: #333; border-bottom-left-radius: 2px; }
+        .input-area { background: #f0f0f0; padding: 12px; display: flex; gap: 10px; border-top: 1px solid #ddd; }
+        input { flex: 1; padding: 12px 20px; border: none; border-radius: 25px; outline: none; font-size: 16px; }
+        button { background: #075e54; color: white; border: none; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #ccc; }
     </style>
 </head>
 <body>
 
-<div class="header" id="plantName">دردشة مع نبتتك</div>
+<div class="header" id="plantTitle">دردشة مع نبتتك</div>
 <div id="chatBox"></div>
 
 <div class="input-area">
-    <input type="text" id="userInput" placeholder="اسأل زرعتك أي حاجة...">
+    <input type="text" id="userInput" placeholder="اسألني أي حاجة...">
     <button id="sendBtn" onclick="askAI()">إرسال</button>
 </div>
 
 <script>
-    // الـ API Key بتاعك محطوط هنا جاهز
+    // المفتاح الخاص بك
     const API_KEY = "AIzaSyCEbYsG4AzgVesgqDEBT74BqYxNMzAf8xE"; 
 
     const params = new URLSearchParams(window.location.search);
-    const pType = params.get('type') || 'عامة';
-    document.getElementById('plantName').innerText = "دردشة مع نبتة: " + pType;
+    const pType = params.get('type') || 'جميلة';
+
+    document.getElementById('plantTitle').innerText = "دردشة مع نبتة: " + pType;
 
     function addMsg(text, side) {
         const box = document.getElementById('chatBox');
@@ -43,27 +45,34 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    // رسالة ترحيبية
-    addMsg(`أهلاً بيك! أنا نبتة ${pType}، ومبسوطة إنك مهتم بيا. عايز تسألني عن إيه في تربيتي؟`, 'bot');
+    // رسالة الترحيب الذكية
+    addMsg(`يا أهلاً بيك! أنا نبتة ${pType}، وصاحبي محمد بعتني ليك عشان أكون رفيقتك. ادردش معاك في إيه النهاردة؟`, 'bot');
 
     async function askAI() {
         const input = document.getElementById('userInput');
         const btn = document.getElementById('sendBtn');
         const prompt = input.value.trim();
+        
         if (!prompt) return;
 
         addMsg(prompt, 'user');
         input.value = "";
-        btn.innerText = "...";
         btn.disabled = true;
+        btn.innerText = "...";
 
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            // استخدام رابط الـ v1 الأحدث والأكثر استقراراً
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
             const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `أنت نبتة من نوع ${pType}. رد على المستخدم باللهجة المصرية العامية بطريقة مرحة وشخصية لطيفة كأنك كائن حي. السؤال: ${prompt}` }] }]
+                    contents: [{
+                        parts: [{
+                            text: `أنت نبتة من نوع ${pType}. رد على المستخدم بلهجة مصرية عامية، بأسلوب شخصي، ودود، ومرح كأنك كائن حي. لا تكتفِ بالإجابات العلمية، بل دردش معه كصديق. السؤال: ${prompt}`
+                        }]
+                    }]
                 })
             });
 
@@ -73,14 +82,15 @@
                 const reply = data.candidates[0].content.parts[0].text;
                 addMsg(reply, 'bot');
             } else {
-                addMsg("جوجل لسه بيفكر.. جرب تسألني كمان دقيقة يا صاحبي.", 'bot');
+                addMsg("أنا محتاجة شوية تركيز، اسألني تاني كدة؟", 'bot');
+                console.log("Error details:", data);
             }
         } catch (error) {
-            addMsg("حصل مشكلة في الاتصال، اتأكد إن النت شغال كويس.", 'bot');
+            addMsg("النت عندي فيه مشكلة، جرب كمان شوية يا فنان.", 'bot');
         }
 
-        btn.innerText = "إرسال";
         btn.disabled = false;
+        btn.innerText = "إرسال";
     }
 </script>
 </body>
