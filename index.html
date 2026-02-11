@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -6,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مشتل محمد الذكي - AI</title>
     
-    <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -39,16 +37,14 @@
     </style>
 
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@1.40.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "@google/generative-ai": "https://esm.sh/@google/generative-ai"
+      }
+    }
+    </script>
 </head>
 <body class="overflow-hidden h-screen">
     <div id="root"></div>
@@ -56,7 +52,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'react';
         import ReactDOM from 'react-dom';
-        import { GoogleGenAI } from '@google/genai';
+        import { GoogleGenerativeAI } from '@google/generative-ai';
 
         // --- Constants & Database ---
         const PLANT_DB = {
@@ -88,54 +84,48 @@
             )
         };
 
-        // --- API Services ---
-        const getAI = () => new GoogleGenAI({ apiKey: window.process?.env?.API_KEY || '' });
+        // --- API Services (تم الإصلاح هنا) ---
+        // تم وضع مفتاحك هنا ليعمل مباشرة
+        const API_KEY = "AIzaSyBYuDzE05mcTjRn6y9OC3UQbH6ppD4OXL4"; 
+        const genAI = new GoogleGenerativeAI(API_KEY);
 
         const analyzePlantImage = async (base64Image, prompt = "Analyze this plant. Identify it and provide care instructions.") => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-pro-preview',
-                contents: {
-                    parts: [
-                        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-                        { text: prompt }
-                    ]
-                },
-                config: {
-                    systemInstruction: "أنت خبير نباتات محترف. رد باللغة العربية. كن موجزاً ومفيداً."
-                }
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash",
+                systemInstruction: "أنت خبير نباتات محترف. رد باللغة العربية. كن موجزاً ومفيداً."
             });
-            return response.text;
+            
+            const imagePart = {
+                inlineData: {
+                    data: base64Image.split(',')[1],
+                    mimeType: "image/jpeg",
+                },
+            };
+
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            return response.text();
         };
 
         const chatWithBotanist = async (message, history) => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: [
-                    ...history,
-                    { role: 'user', parts: [{ text: message }] }
-                ],
-                config: {
-                    systemInstruction: "أنت خبير في العناية بالنباتات في مشتل محمد الذكي. رد باللغة العربية بأسلوب ودود ومفيد. إذا سألك المستخدم عن الأسعار، أخبره أن الأسعار متغيرة ويجب زيارة المشتل.",
-                }
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash",
+                systemInstruction: "أنت خبير في العناية بالنباتات في مشتل محمد الذكي. رد باللغة العربية بأسلوب ودود ومفيد. إذا سألك المستخدم عن الأسعار، أخبره أن الأسعار متغيرة ويجب زيارة المشتل.",
             });
-            return response.text;
-        };
+            
+            // تحويل المحادثة لتنسيق يقبله الموديل الجديد
+            const chatHistory = history.map(msg => ({
+                role: msg.role === 'bot' || msg.role === 'model' ? 'model' : 'user',
+                parts: [{ text: msg.parts[0].text }]
+            }));
 
-        const editPlantImage = async (base64Image, editPrompt) => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: {
-                    parts: [
-                        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-                        { text: editPrompt }
-                    ]
-                }
+            const chat = model.startChat({
+                history: chatHistory
             });
-            const imgPart = response.candidates[0].content.parts.find(p => p.inlineData);
-            return imgPart ? `data:image/png;base64,${imgPart.inlineData.data}` : null;
+
+            const result = await chat.sendMessage(message);
+            const response = await result.response;
+            return response.text();
         };
 
         // --- Main App Component ---
@@ -185,7 +175,12 @@
                 setMessages(prev => [...prev, userMsg]);
                 const currentInput = inputValue;
                 const currentImage = selectedImage;
-                const currentMode = isEditingMode;
+                
+                // استخدام الرسائل السابقة كسياق (context)
+                const history = messages.slice(-5).map(m => ({
+                    role: m.sender, 
+                    parts: [{ text: m.text }]
+                }));
 
                 setInputValue('');
                 setSelectedImage(null);
@@ -194,18 +189,10 @@
 
                 try {
                     let botText = '';
-                    let botImg = null;
-
-                    if (currentImage && currentMode) {
-                        botImg = await editPlantImage(currentImage, currentInput || "Improve this plant photo");
-                        botText = botImg ? "تم تعديل الصورة بناءً على طلبك! ✨" : "عذراً، لم أستطع تعديل الصورة.";
-                    } else if (currentImage) {
-                        botText = await analyzePlantImage(currentImage, currentInput);
+                    
+                    if (currentImage) {
+                        botText = await analyzePlantImage(currentImage, currentInput || "ما هذه النبتة وكيف أعتني بها؟");
                     } else {
-                        const history = messages.map(m => ({
-                            role: m.sender === 'user' ? 'user' : 'model',
-                            parts: [{ text: m.text }]
-                        })).slice(-6);
                         botText = await chatWithBotanist(currentInput, history);
                     }
 
@@ -213,13 +200,21 @@
                         id: (Date.now() + 1).toString(),
                         text: botText,
                         sender: 'bot',
-                        timestamp: new Date(),
-                        imageUrl: botImg
+                        timestamp: new Date()
                     }]);
                 } catch (e) {
+                    console.error(e);
+                    let errorReply = "حصلت مشكلة في الاتصال، حاول تاني.";
+                    // الرد الاحتياطي من قاعدة البيانات لو الـ API فشل
+                    const info = PLANT_DB[plantType];
+                    if (info) {
+                         if (currentInput.includes("مية") || currentInput.includes("ري")) errorReply = `ولا يهمك، بخصوص الري: ${info.w}`;
+                         else if (currentInput.includes("شمس") || currentInput.includes("مكان")) errorReply = `بخصوص المكان: ${info.s}`;
+                    }
+                    
                     setMessages(prev => [...prev, {
                         id: (Date.now() + 1).toString(),
-                        text: "حدث خطأ. تأكد من إعداد مفتاح الـ API بشكل صحيح.",
+                        text: errorReply,
                         sender: 'bot',
                         timestamp: new Date()
                     }]);
@@ -291,9 +286,6 @@
                                 </div>
                                 <div className="flex-1 flex flex-col gap-1">
                                     <span className="text-xs font-medium text-slate-600">صورة مرفقة</span>
-                                    <button onClick={() => setIsEditingMode(!isEditingMode)} className={`text-[10px] px-2 py-1 rounded-full w-fit flex items-center gap-1 ${isEditingMode ? 'bg-purple-100 text-purple-700 font-bold' : 'bg-slate-200 text-slate-600'}`}>
-                                        <Icons.Magic /> {isEditingMode ? 'وضع التعديل مفعل' : 'تعديل الصورة بالذكاء؟'}
-                                    </button>
                                 </div>
                             </div>
                         )}
