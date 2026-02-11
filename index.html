@@ -3,25 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شات مع زرعتك</title>
+    <title>Oregano Talk - كلم زرعتك</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4fbf4; text-align: center; padding: 20px; }
-        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        .btn { background: #2d5a27; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin: 5px; cursor: pointer; width: 80%; }
-        #chat { margin-top: 20px; padding: 10px; background: #e8f5e9; border-radius: 10px; min-height: 50px; }
+        /* ستايل شيك يشبه التطبيقات */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; margin: 0; padding-bottom: 80px; }
+        .header { background: #1b4d3e; color: white; padding: 20px; text-align: center; border-radius: 0 0 25px 25px; sticky; top: 0; }
+        .chat-box { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 12px 18px; border-radius: 20px; max-width: 80%; font-size: 15px; line-height: 1.5; }
+        .bot { background: #e2f0e9; align-self: flex-start; color: #1b4d3e; }
+        .user { background: #1b4d3e; align-self: flex-end; color: white; }
+        .input-area { position: fixed; bottom: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .input-area button { background: #1b4d3e; color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>🌿 أهلاً! أنا زرعتك الجديدة</h2>
-        <p>اسألني عن أي حاجة تخصني:</p>
-        <button class="btn" onclick="say('اسقيني مرتين في الأسبوع بمية فاترة.')">أشرب مية إمتى؟</button>
-        <button class="btn" onclick="say('أنا بحب الشمس جداً بس بلاش وقت الظهيرة الحار.')">أتحط في الشمس؟</button>
-        <button class="btn" onclick="say('لو الورق اصفرّ، يبقى سقتني مية زيادة!')">ليه ورقي بيصفر؟</button>
-        <div id="chat">اضغط على سؤال وهرد عليك..</div>
+
+<div class="header">
+    <h2 id="pName">نبتة أوريجانو 🌿</h2>
+    <small>أنا هنا عشان أقولك محتاجة إيه!</small>
+</div>
+
+<div class="chat-box" id="chatBox">
     </div>
-    <script>
-        function say(msg) { document.getElementById('chat').innerText = msg; }
-    </script>
+
+<div class="input-area">
+    <button onclick="ask('أشرب مية إمتى؟')">شرب المية</button>
+    <button onclick="ask('أتحط فين؟')">مكاني فين؟</button>
+    <button onclick="clearChat()" style="background:#cc0000;">مسح الشات</button>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pType = urlParams.get('type') || 'default';
+
+    const data = {
+        'jasmine': { name: 'ياسمينة أوريجانو 🌼', welcome: 'يا أهلاً بيك! أنا ياسمينة.. ريحتي هتملى بيتك، بس دلعني!', water: 'اسقيني مرتين في الأسبوع، وبلاش تغرقني مية كتير يا فنان.', sun: 'حطني في البلكونة في مكان فيه شمس الصبح، بلاش شمس الظهر الحامية.' },
+        'cactus': { name: 'صبار المؤسسة 🌵', welcome: 'يا صاحبي أنا صبار يعني الصبر كله عندي، متقلقش عليا!', water: 'اسقيني مرة كل أسبوعين، أنا بحب العطش أكتر من المية.', sun: 'ارمينا في الشمس وسيبنا، أنا بعشق الحرارة.' }
+    };
+
+    const plant = data[pType] || data['jasmine'];
+    document.getElementById('pName').innerText = plant.name;
+
+    // وظيفة حفظ واسترجاع الشات
+    function loadChat() {
+        const saved = localStorage.getItem('chat_' + pType);
+        if (saved) {
+            document.getElementById('chatBox').innerHTML = saved;
+        } else {
+            addMsg(plant.welcome, 'bot');
+        }
+    }
+
+    function addMsg(text, side) {
+        const box = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = `msg ${side}`;
+        div.innerText = text;
+        box.appendChild(div);
+        localStorage.setItem('chat_' + pType, box.innerHTML);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function ask(q) {
+        addMsg(q, 'user');
+        setTimeout(() => {
+            let res = q.includes('مية') ? plant.water : plant.sun;
+            addMsg(res, 'bot');
+        }, 500);
+    }
+
+    function clearChat() {
+        localStorage.removeItem('chat_' + pType);
+        location.reload();
+    }
+
+    loadChat();
+</script>
+
 </body>
 </html>
