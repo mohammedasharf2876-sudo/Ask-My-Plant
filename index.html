@@ -1,714 +1,1166 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Icons, PLANT_DB } from './constants';
-import { Message } from './types';
-import { chatWithBotanist, analyzePlantImage, editPlantImage } from './services/gemini';
-
-const App: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isEditingMode, setIsEditingMode] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Get plant type from URL
-  const params = new URLSearchParams(window.location.search);
-  const rawType = params.get('type') || 'عامة';
-  const plantType = rawType.replace(/_/g, ' ');
-
-  useEffect(() => {
-    const initialGreeting = async () => {
-      let welcomeText = `يا أهلاً! أنا مساعدك الذكي في مشتل محمد. 👋<br/>أنا هنا لمساعدتك في العناية بـ <b>${plantType}</b>.`;
-      
-      const info = PLANT_DB[plantType];
-      if (info) {
-        welcomeText += `<br/><br/>💡 <b>نظام الري:</b> ${info.w}<br/>☀️ <b>المكان:</b> ${info.s}<br/>💊 <b>التسميد:</b> ${info.f}`;
-      }
-
-      setMessages([{
-        id: '1',
-        text: welcomeText,
-        sender: 'bot',
-        timestamp: new Date()
-      }]);
-    };
-    initialGreeting();
-  }, [plantType]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSend = async () => {
-    if (!inputValue.trim() && !selectedImage) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date(),
-      imageUrl: selectedImage || undefined,
-      isEditing: isEditingMode
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputValue;
-    const currentImage = selectedImage;
-    const currentMode = isEditingMode;
-
-    setInputValue('');
-    setSelectedImage(null);
-    setIsEditingMode(false);
-    setIsLoading(true);
-
-    try {
-      let botResponseText = '';
-      let botImageUrl: string | undefined;
-
-      if (currentImage && currentMode) {
-        // Image Editing Mode
-        const edited = await editPlantImage(currentImage, currentInput || "Improve this plant photo");
-        if (edited) {
-          botImageUrl = edited;
-          botResponseText = "تم تعديل الصورة بناءً على طلبك! ✨";
-        } else {
-          botResponseText = "عذراً، لم أستطع تعديل الصورة. حاول مرة أخرى بوصف مختلف.";
-        }
-      } else if (currentImage) {
-        // Analysis Mode
-        botResponseText = await analyzePlantImage(currentImage, currentInput) || "لم أستطع تحليل الصورة.";
-      } else {
-        // Text Chat Mode
-        const history = messages.map(m => ({
-            role: m.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: m.text }]
-        })).slice(-6) as any;
-        
-        botResponseText = await chatWithBotanist(currentInput, history) || "عذراً، حدث خطأ.";
-      }
-
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        text: botResponseText,
-        sender: 'bot',
-        timestamp: new Date(),
-        imageUrl: botImageUrl
-      }]);
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        text: "حدث خطأ أثناء معالجة طلبك. تأكد من اتصالك بالإنترنت.",
-        sender: 'bot',
-        timestamp: new Date()
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-        setIsEditingMode(false);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto bg-white shadow-2xl relative">
-      {/* Header */}
-      <header className="bg-emerald-800 text-white p-4 shadow-lg flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="bg-emerald-100 p-2 rounded-full text-emerald-800">
-             🌱
-          </div>
-          <div>
-            <h1 className="font-bold text-lg leading-tight">مشتل محمد الذكي</h1>
-            <p className="text-xs text-emerald-200">دردشة مع {plantType}</p>
-          </div>
-        </div>
-      </header>
-
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f9fafb] custom-scrollbar">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-2xl p-4 shadow-sm relative transition-all ${
-                msg.sender === 'user'
-                  ? 'bg-emerald-600 text-white rounded-br-none'
-                  : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
-              }`}
-            >
-              {msg.imageUrl && (
-                <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                  <img src={msg.imageUrl} alt="Attached" className="max-w-full h-auto object-cover max-h-64" />
-                </div>
-              )}
-              <div
-                className="text-sm md:text-base whitespace-pre-wrap leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: msg.text }}
-              />
-              <div className={`text-[10px] mt-1 opacity-60 text-left`}>
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-slate-100 p-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Input Section */}
-      <div className="p-4 bg-white border-t border-slate-200 sticky bottom-0 z-20">
-        {selectedImage && (
-          <div className="mb-3 flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200 animate-in fade-in slide-in-from-bottom-2">
-            <div className="relative group">
-               <img src={selectedImage} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-slate-300 shadow-sm" />
-               <button 
-                onClick={() => setSelectedImage(null)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-               >✕</button>
-            </div>
-            <div className="flex-1 flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">صورة مرفقة</span>
-              <button 
-                onClick={() => setIsEditingMode(!isEditingMode)}
-                className={`text-[10px] px-2 py-1 rounded-full w-fit transition-colors flex items-center gap-1 ${
-                  isEditingMode ? 'bg-purple-100 text-purple-700 font-bold' : 'bg-slate-200 text-slate-600'
-                }`}
-              >
-                <Icons.Magic />
-                {isEditingMode ? 'وضع التعديل الذكي مفعل' : 'تفعيل وضع التعديل الذكي؟'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 bg-slate-100 rounded-3xl p-1 pr-4 shadow-inner">
-          <input
-            type="text"
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm md:text-base py-2 placeholder:text-slate-400"
-            placeholder={isEditingMode ? "صف التعديل المطلوب (مثلاً: أضف فلتر عتيق)" : "اسأل عن الري، الشمس، أو التسميد..."}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          />
-          
-          <div className="flex items-center gap-1">
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="hidden" 
-              ref={fileInputRef} 
-              onChange={onFileChange} 
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-full transition-all"
-              title="إرفاق صورة للتحليل أو التعديل"
-            >
-              <Icons.Image />
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={isLoading || (!inputValue.trim() && !selectedImage)}
-              className={`p-3 rounded-full transition-all flex items-center justify-center shadow-md ${
-                isLoading || (!inputValue.trim() && !selectedImage)
-                  ? 'bg-slate-300 text-slate-100'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-              }`}
-            >
-              <Icons.Send />
-            </button>
-          </div>
-        </div>
-        
-        {!selectedImage && (
-          <div className="mt-2 flex justify-center gap-4">
-             <button 
-              onClick={() => { setInputValue("كيف أعتني بهذه النبتة؟"); }}
-              className="text-[10px] text-slate-400 border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-50"
-             >نصيحة للعناية</button>
-             <button 
-              onClick={() => { setInputValue("متى يجب ري الزرع؟"); }}
-              className="text-[10px] text-slate-400 border border-slate-200 px-3 py-1 rounded-full hover:bg-slate-50"
-             >موعد الري</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default App;
-
-        
-import React from 'react';
-import { PlantInfo } from './types';
-
-export const PLANT_DB: Record<string, PlantInfo> = {
-    "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
-    "نعناع": { w: "كل يوم في الصيف (بيحب المية)", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
-    "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة (بيتحمل)", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
-    "زعتر": { w: "قليل جداً (بيكره المية الكتير)", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-    "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات عالأقل", f: "NPK عالي البوتاسيوم عشان يزهر", n: "قص الورد الدبلان أول بأول عشان يطلع جديد." },
-    "بوتس": { w: "كل 4-5 أيام (لما التربة تنشف)", s: "ضوء لمبة أو شباك (ضل)", f: "سماد ورقي", n: "أسهل زرعة للمبتدئين، بتعيش في أي حتة." },
-    "جلد النمر": { w: "كل أسبوعين مرة (انساه)", s: "أي إضاءة (قوية أو ضعيفة)", f: "مش محتاج", n: "بينقي الهوا ومبيموتش بسهولة (حديد)." },
-    "زاميا": { w: "مرة كل 20 يوم (جذوره بتخزن مية)", s: "ضل كامل أو ضوء خفيف", f: "NPK كل شهرين", n: "الزرعة الشيك، ورقها بيلمع لوحده." },
-};
-
-export const Icons = {
-  Send: () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-    </svg>
-  ),
-  Image: () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6.75v11.25a1.5 1.5 0 001.5 1.5z" />
-    </svg>
-  ),
-  Sparkles: () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.456-2.454L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.454zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-    </svg>
-  ),
-  Magic: () => (
-     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-3.47 2.82-1.741L12.63 12.29M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-    </svg>
-  )
-};
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشتل محمد الذكي - AI</title>
-    
-    <!-- Scripts & Styles -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'IBM Plex Sans Arabic', sans-serif;
-            background-color: #fdfbf7;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        @keyframes bounce-subtle {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
-        }
-        .animate-bounce-subtle {
-            animation: bounce-subtle 1.5s infinite ease-in-out;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مشتل محمد الذكي</title>
 
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@1.40.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
+  <style>
+    :root{
+      --g1:#1b5e20;
+      --g2:#2e7d32;
+      --bg:#fdfbf7;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --shadow: 0 8px 22px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      margin:0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* TOP */
+    .top{
+      background: linear-gradient(90deg, var(--g1), var(--g2));
+      color:#fff;
+      padding:14px 14px 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.12);
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .brand .title{
+      font-weight:900;
+      font-size:1.1rem;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      max-width:70vw;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .brand .tools{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .btn-mini{
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.14);
+      color:#fff;
+      padding:8px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:.85rem;
+      backdrop-filter: blur(6px);
+    }
+    .btn-mini:active{transform:scale(.98)}
+
+    .plant-card{
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.25);
+      border-radius: var(--radius);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .plant-img{
+      width:72px;
+      height:72px;
+      border-radius:16px;
+      overflow:hidden;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.08);
+      position:relative;
+    }
+    .plant-img img{width:100%;height:100%;object-fit:cover;display:block}
+    .plant-img .badge{
+      position:absolute;
+      bottom:6px;
+      left:6px;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;
+      font-size:.75rem;
+      padding:3px 8px;
+      border-radius:999px;
+      backdrop-filter: blur(6px);
+    }
+
+    .plant-meta{flex:1; min-width:0;}
+    .plant-meta .name{
+      font-weight:900;
+      font-size:1rem;
+      margin-bottom:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .plant-meta .sub{
+      font-size:.86rem;
+      opacity:.95;
+      color:#f1f5f9;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chips{
+      margin-top:8px;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(255,255,255,.14);
+      color:#fff;
+      padding:6px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:.82rem;
+      user-select:none;
+    }
+    .chip:active{transform:scale(.98)}
+
+    /* CHAT */
+    #chatBox{
+      flex:1;
+      padding:14px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      background-image: radial-gradient(#dcedc8 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .msg{
+      padding:12px 16px;
+      border-radius:20px;
+      max-width: 92%;
+      font-size:15px;
+      line-height:1.75;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      word-break:break-word;
+    }
+    .bot{
+      background: var(--card);
+      align-self:flex-start;
+      color:#111827;
+      border-bottom-right-radius: 6px;
+      border:1px solid var(--line);
+    }
+    .user{
+      background: var(--g2);
+      align-self:flex-end;
+      color:#fff;
+      border-bottom-left-radius: 6px;
+    }
+    .meta-line{
+      margin-top:8px;
+      font-size:.85rem;
+      color: var(--muted);
+    }
+    .mini-actions{
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .mini-actions button{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:7px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:.85rem;
+    }
+    .mini-actions button:hover{background:#f9fafb}
+
+    .img-reply{
+      width:100%;
+      max-width:360px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+      margin-top:10px;
+      display:block;
+    }
+
+    .typing{
+      opacity:.9;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:#111827;
+    }
+    .dots{display:inline-flex; gap:4px;}
+    .dot{
+      width:6px;height:6px;border-radius:50%;
+      background:#9ca3af;
+      animation: bounce 1s infinite ease-in-out;
+    }
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+
+    /* INPUT */
+    .input-area{
+      background:#fff;
+      padding:12px;
+      display:flex;
+      gap:10px;
+      border-top:1px solid var(--line);
+      align-items:center;
+    }
+    input{
+      flex:1;
+      padding:12px 16px;
+      border:2px solid #e5e7eb;
+      border-radius:999px;
+      outline:none;
+      font-size:16px;
+      transition:.25s;
+    }
+    input:focus{border-color: var(--g2)}
+    .btn-send{
+      background: var(--g1);
+      color:#fff;
+      border:none;
+      padding:12px 16px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .btn-voice{
+      background:#fff;
+      color: var(--g1);
+      border:2px solid #e5e7eb;
+      padding:12px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .btn-voice.active{
+      border-color: var(--g2);
+      box-shadow: 0 0 0 4px rgba(46,125,50,.15);
+    }
+
+    @media (max-width:420px){
+      .plant-img{width:62px;height:62px}
+      .btn-mini{padding:7px 9px}
+      .chip{padding:6px 9px}
+    }
+  </style>
 </head>
-<body class="overflow-hidden h-screen">
-    <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom';
-        import { GoogleGenAI } from '@google/genai';
+<body>
+  <div class="top">
+    <div class="brand">
+      <div class="title" id="plantTitle">نبتتك الذكية 🌱</div>
+      <div class="tools">
+        <button class="btn-mini" onclick="showHelp()">الأوامر</button>
+        <button class="btn-mini" onclick="showPlantList()">الأنواع</button>
+        <button class="btn-mini" onclick="resetChat()">بداية جديدة</button>
+      </div>
+    </div>
 
-        // --- Constants & Database ---
-        const PLANT_DB = {
-            "ريحان": { w: "يوم ويوم (التربة رطبة دائماً)", s: "شمس مباشرة ومكان متهوي", f: "سماد عضوي كل شهر", n: "اقطف القمم النامية عشان يكبر ويفرع." },
-            "نعناع": { w: "كل يوم في الصيف (بيحب المية)", s: "شمس خفيفة أو نصف ظل", f: "سماد متوازن NPK", n: "الجذور بتمتد بسرعة، يفضل في أصيص لوحده." },
-            "روزماري": { w: "لما التربة تنشف تماماً", s: "شمس حارقة (بيتحمل)", f: "مش محتاج تسميد كتير", n: "ممتاز في الطبخ وريحته بتطرد الحشرات." },
-            "زعتر": { w: "قليل جداً (بيكره المية الكتير)", s: "شمس كاملة", f: "مرة كل موسم", n: "عشبة قوية وبتتحمل الجفاف." },
-            "ورد بلدي": { w: "يوم ويوم بانتظام", s: "شمس مباشرة 6 ساعات عالأقل", f: "NPK عالي البوتاسيوم عشان يزهر", n: "قص الورد الدبلان أول بأول عشان يطلع جديد." },
-            "بوتس": { w: "كل 4-5 أيام (لما التربة تنشف)", s: "ضوء لمبة أو شباك (ضل)", f: "سماد ورقي", n: "أسهل زرعة للمبتدئين، بتعيش في أي حتة." },
-            "جلد النمر": { w: "كل أسبوعين مرة (انساه)", s: "أي إضاءة (قوية أو ضعيفة)", f: "مش محتاج", n: "بينقي الهوا ومبيموتش بسهولة (حديد)." },
-            "زاميا": { w: "مرة كل 20 يوم (جذوره بتخزن مية)", s: "ضل كامل أو ضوء خفيف", f: "NPK كل شهرين", n: "الزرعة الشيك، ورقها بيلمع لوحده." },
-        };
+    <div class="plant-card">
+      <div class="plant-img">
+        <img id="plantImg" alt="صورة النبات" />
+        <div class="badge" id="imgBadge">صورة</div>
+      </div>
+      <div class="plant-meta">
+        <div class="name" id="plantName">—</div>
+        <div class="sub" id="plantSub">—</div>
+        <div class="chips" id="quickChips"></div>
+      </div>
+    </div>
+  </div>
 
-        const Icons = {
-            Send: () => (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-            ),
-            Image: () => (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6.75v11.25a1.5 1.5 0 001.5 1.5z" />
-                </svg>
-            ),
-            Magic: () => (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-3.47 2.82-1.741L12.63 12.29M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                </svg>
-            )
-        };
+  <div id="chatBox"></div>
 
-        // --- API Services ---
-        const getAI = () => new GoogleGenAI({ apiKey: window.process?.env?.API_KEY || '' });
+  <div class="input-area">
+    <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+    <input id="userInput" type="text" placeholder="قول أي حاجة… (ازيك؟ ري؟ اصفرار؟ حشرات؟ وريني صورة؟)" onkeypress="handleEnter(event)" />
+    <button class="btn-send" onclick="replyLogic()">إرسال</button>
+  </div>
 
-        const analyzePlantImage = async (base64Image, prompt = "Analyze this plant. Identify it and provide care instructions.") => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-pro-preview',
-                contents: {
-                    parts: [
-                        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-                        { text: prompt }
-                    ]
-                },
-                config: {
-                    systemInstruction: "أنت خبير نباتات محترف. رد باللغة العربية. كن موجزاً ومفيداً."
-                }
-            });
-            return response.text;
-        };
+<script>
+/* =========================================================
+  ✅ الهدف:
+  - كل QR يفتح شات لزرعة واحدة (type=اسم الزرعة)
+  - المستخدم يقدر يقول أي كلام (سلام/ازيك/اشرحلي/مشاكل/حشرات...)
+  - لو كتب اسم زرعة (مثلاً "ريحان") يتحول تلقائياً لها بسهولة
+  - مهم جداً: مش هنحفظ محادثة على الجهاز (خصوصية + مايبقاش "حافظ كلمتني")
+     → استخدام sessionStorage مع مسح تلقائي عند فتح الصفحة (افتراضي)
+     → تقدر تخليها تحفظ مؤقتاً بوضع keep=1 في الرابط
+        مثال: ?type=ياسمين&keep=1
+========================================================= */
 
-        const chatWithBotanist = async (message, history) => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: [
-                    ...history,
-                    { role: 'user', parts: [{ text: message }] }
-                ],
-                config: {
-                    systemInstruction: "أنت خبير في العناية بالنباتات في مشتل محمد الذكي. رد باللغة العربية بأسلوب ودود ومفيد. إذا سألك المستخدم عن الأسعار، أخبره أن الأسعار متغيرة ويجب زيارة المشتل.",
-                }
-            });
-            return response.text;
-        };
+/* =========================
+   1) إعدادات
+========================= */
+const SETTINGS = {
+  // افتراضي: كل فتحه جديدة تبدأ من الصفر (حل مشكلة "حافظ كلمتني")
+  RESET_ON_LOAD: true,
 
-        const editPlantImage = async (base64Image, editPrompt) => {
-            const ai = getAI();
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: {
-                    parts: [
-                        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-                        { text: editPrompt }
-                    ]
-                }
-            });
-            const imgPart = response.candidates[0].content.parts.find(p => p.inlineData);
-            return imgPart ? `data:image/png;base64,${imgPart.inlineData.data}` : null;
-        };
-
-        // --- Main App Component ---
-        const App = () => {
-            const [messages, setMessages] = useState([]);
-            const [inputValue, setInputValue] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-            const [selectedImage, setSelectedImage] = useState(null);
-            const [isEditingMode, setIsEditingMode] = useState(false);
-            const chatEndRef = useRef(null);
-            const fileInputRef = useRef(null);
-
-            const params = new URLSearchParams(window.location.search);
-            const rawType = params.get('type') || 'عامة';
-            const plantType = rawType.replace(/_/g, ' ');
-
-            useEffect(() => {
-                const info = PLANT_DB[plantType];
-                let welcomeText = `يا أهلاً! أنا مساعدك الذكي في مشتل محمد. 👋<br/>أنا هنا لمساعدتك في العناية بـ <b>${plantType}</b>.`;
-                if (info) {
-                    welcomeText += `<br/><br/>💡 <b>نظام الري:</b> ${info.w}<br/>☀️ <b>المكان:</b> ${info.s}<br/>💊 <b>التسميد:</b> ${info.f}`;
-                }
-                setMessages([{
-                    id: '1',
-                    text: welcomeText,
-                    sender: 'bot',
-                    timestamp: new Date()
-                }]);
-            }, [plantType]);
-
-            useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, [messages]);
-
-            const handleSend = async () => {
-                if (!inputValue.trim() && !selectedImage) return;
-
-                const userMsg = {
-                    id: Date.now().toString(),
-                    text: inputValue,
-                    sender: 'user',
-                    timestamp: new Date(),
-                    imageUrl: selectedImage,
-                    isEditing: isEditingMode
-                };
-
-                setMessages(prev => [...prev, userMsg]);
-                const currentInput = inputValue;
-                const currentImage = selectedImage;
-                const currentMode = isEditingMode;
-
-                setInputValue('');
-                setSelectedImage(null);
-                setIsEditingMode(false);
-                setIsLoading(true);
-
-                try {
-                    let botText = '';
-                    let botImg = null;
-
-                    if (currentImage && currentMode) {
-                        botImg = await editPlantImage(currentImage, currentInput || "Improve this plant photo");
-                        botText = botImg ? "تم تعديل الصورة بناءً على طلبك! ✨" : "عذراً، لم أستطع تعديل الصورة.";
-                    } else if (currentImage) {
-                        botText = await analyzePlantImage(currentImage, currentInput);
-                    } else {
-                        const history = messages.map(m => ({
-                            role: m.sender === 'user' ? 'user' : 'model',
-                            parts: [{ text: m.text }]
-                        })).slice(-6);
-                        botText = await chatWithBotanist(currentInput, history);
-                    }
-
-                    setMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        text: botText,
-                        sender: 'bot',
-                        timestamp: new Date(),
-                        imageUrl: botImg
-                    }]);
-                } catch (e) {
-                    setMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        text: "حدث خطأ. تأكد من إعداد مفتاح الـ API بشكل صحيح.",
-                        sender: 'bot',
-                        timestamp: new Date()
-                    }]);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const onFileChange = (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setSelectedImage(reader.result);
-                        setIsEditingMode(false);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
-            return (
-                <div className="flex flex-col h-screen max-w-2xl mx-auto bg-white shadow-2xl relative">
-                    <header className="bg-emerald-800 text-white p-4 shadow-lg flex items-center justify-between sticky top-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-emerald-100 p-2 rounded-full text-emerald-800 text-xl">🌱</div>
-                            <div>
-                                <h1 className="font-bold text-lg leading-tight">مشتل محمد الذكي</h1>
-                                <p className="text-xs text-emerald-200">مساعدك النباتي الشخصي</p>
-                            </div>
-                        </div>
-                    </header>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f9fafb] custom-scrollbar">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm transition-all ${
-                                    msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
-                                }`}>
-                                    {msg.imageUrl && (
-                                        <div className="mb-2 rounded-lg overflow-hidden border border-slate-200">
-                                            <img src={msg.imageUrl} className="max-w-full h-auto object-cover max-h-64" />
-                                        </div>
-                                    )}
-                                    <div className="text-sm md:text-base whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: msg.text }} />
-                                    <div className="text-[10px] mt-1 opacity-60">
-                                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {isLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white border border-slate-100 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-1">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></div>
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                                </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </div>
-
-                    <div className="p-4 bg-white border-t border-slate-200">
-                        {selectedImage && (
-                            <div className="mb-3 flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                                <div className="relative">
-                                    <img src={selectedImage} className="w-16 h-16 rounded-lg object-cover border border-slate-300" />
-                                    <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs">✕</button>
-                                </div>
-                                <div className="flex-1 flex flex-col gap-1">
-                                    <span className="text-xs font-medium text-slate-600">صورة مرفقة</span>
-                                    <button onClick={() => setIsEditingMode(!isEditingMode)} className={`text-[10px] px-2 py-1 rounded-full w-fit flex items-center gap-1 ${isEditingMode ? 'bg-purple-100 text-purple-700 font-bold' : 'bg-slate-200 text-slate-600'}`}>
-                                        <Icons.Magic /> {isEditingMode ? 'وضع التعديل مفعل' : 'تعديل الصورة بالذكاء؟'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-2 bg-slate-100 rounded-3xl p-1 pr-4 shadow-inner">
-                            <input
-                                type="text"
-                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2"
-                                placeholder={isEditingMode ? "صف التعديل..." : "اسألني أي شيء..."}
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            />
-                            <div className="flex items-center gap-1">
-                                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFileChange} />
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-500 hover:text-emerald-600">
-                                    <Icons.Image />
-                                </button>
-                                <button onClick={handleSend} disabled={isLoading} className={`p-3 rounded-full ${isLoading ? 'bg-slate-300' : 'bg-emerald-600 text-white'}`}>
-                                    <Icons.Send />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
-</body>
-</html>
-
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-{
-  "name": "Smart Nursery AI (مشتل محمد الذكي)",
-  "description": "An AI-powered botanical assistant for plant care, image analysis, and photo editing.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}
-  
-import { GoogleGenAI, Type } from "@google/genai";
-
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-
-export const analyzePlantImage = async (base64Image: string, prompt: string = "Analyze this plant. Identify it and provide care instructions including watering, sun requirements, and tips.") => {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: {
-      parts: [
-        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-        { text: prompt }
-      ]
-    },
-    config: {
-      systemInstruction: "You are a professional botanist and plant care expert. Respond in Arabic. Be concise but helpful."
-    }
-  });
-  return response.text;
+  // عدد اقتراحات الأزرار في كل رد
+  MAX_ACTIONS: 4
 };
 
-export const chatWithBotanist = async (message: string, history: { role: 'user' | 'model', parts: { text: string }[] }[]) => {
-  const ai = getAI();
-  const chat = ai.chats.create({
-    model: 'gemini-3-pro-preview',
-    config: {
-      systemInstruction: "أنت خبير في العناية بالنباتات في مشتل محمد الذكي. رد باللغة العربية بأسلوب ودود ومفيد. إذا سألك المستخدم عن الأسعار، أخبره أن الأسعار متغيرة ويجب زيارة المشتل.",
-    }
-  });
-  
-  // Note: sendMessage doesn't support full history easily in this SDK version as shown, 
-  // we use generateContent for simplicity or just the last turn.
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: [
-        ...history,
-        { role: 'user', parts: [{ text: message }] }
-    ] as any
-  });
-  
-  return response.text;
+/* =========================
+   2) قاعدة بيانات النباتات
+   - img: لو عندك صور ثابتة، ضيف array روابط هنا
+   - q: كلمة بحث للصور (لو img مش موجودة هنجيب من Unsplash تلقائي)
+========================= */
+const plantDB = {
+  // عطريات وأعشاب
+  "ريحان": { cat:"عطري/عشب", q:"basil herb plant", aliases:["حبق"], w:"يوم ويوم (التربة رطبة دائماً بدون إغراق)", s:"شمس مباشرة صباحاً + تهوية", f:"سماد عضوي خفيف كل شهر", n:"اقطف القمم النامية عشان يفرّع." },
+  "نعناع": { cat:"عطري/عشب", q:"mint plant", aliases:["نعناع بلدي"], w:"كل يوم في الصيف (بيحب المية) + لازم صرف كويس", s:"شمس خفيفة أو نصف ظل", f:"سماد متوازن NPK خفيف كل 3-4 أسابيع", n:"الجذور بتجري… الأفضل في أصيص لوحده." },
+  "روزماري": { cat:"عطري/عشب", q:"rosemary plant", aliases:["إكليل الجبل"], w:"لما التربة تنشف تماماً", s:"شمس قوية (بيتحمل)", f:"مش محتاج تسميد كتير", n:"ريحته بتطرد بعض الحشرات." },
+  "زعتر": { cat:"عطري/عشب", q:"thyme herb plant", aliases:["زعتر بلدي"], w:"قليل جداً (بيكره المية الكتير)", s:"شمس كاملة", f:"مرة كل موسم", n:"قوي وبيتقبل الجفاف." },
+  "لافندر": { cat:"عطري/عشب", q:"lavender plant", aliases:["خُزامى"], w:"لما التربة تجف (بيكره الرطوبة)", s:"شمس قوية جداً", f:"قليل جداً", n:"بيحب الجو الجاف والتهوية." },
+
+  // زهور ومزهرات
+  "ورد بلدي": { cat:"زهور", q:"rose plant", aliases:["ورد"], w:"يوم ويوم بانتظام حسب الجو", s:"شمس مباشرة 6 ساعات على الأقل", f:"NPK عالي البوتاسيوم وقت التزهير", n:"قص الورد الدبلان أول بأول." },
+  "فل": { cat:"زهور", q:"jasmine sambac plant", aliases:["فل بلدي"], w:"كل يومين (تربة رطبة بدون غرق)", s:"شمس مغربلة (مش حارقة)", f:"حديد كل شهر لو الورق بيصفر", n:"ريحتها بتقوى وقت الغروب." },
+  "ياسمين": { cat:"زهور/متسلق", q:"jasmine vine plant", aliases:["ياسمين متسلق"], w:"معتدل (لما الوش ينشف)", s:"شمس كاملة أو شمس صباح", f:"سماد متوازن", n:"محتاج دعامة/شبك للتسلق." },
+  "جاردينيا": { cat:"زهور", q:"gardenia plant", aliases:["Gardenia"], w:"مياه قليلة الكلور + ثبات في الري", s:"ضوء قوي جداً غير مباشر", f:"حديد + سماد حامضي", n:"بتكره تغيير المكان فجأة." },
+  "مسك الليل": { cat:"زهور", q:"night blooming jasmine plant", aliases:["مسك"], w:"يوم ويوم", s:"شمس مباشرة", f:"سماد بلدي/عضوي", n:"ريحتها بتزيد بالليل." },
+  "جهنمية": { cat:"زهور خارجية", q:"bougainvillea plant", aliases:["بوچنفليا"], w:"تعطيش خفيف عشان تزهر (قليل)", s:"شمس حارقة طول اليوم", f:"مش محتاجة دلع", n:"كل ما تقل المية تطلع ورد أكتر (من غير ما تذبل)." },
+  "هايبسكس": { cat:"زهور", q:"hibiscus plant", aliases:["كركديه زينة","هيبسكس"], w:"يوم ويوم في الصيف", s:"شمس مباشرة", f:"NPK كل أسبوعين", n:"زهرتها يوم واحد بس… بس شكلها رهيب." },
+  "ونكا": { cat:"زهور", q:"vinca plant", aliases:["ونكا روز"], w:"كل يوم في الحر لو أصيص صغير", s:"شمس أو نصف ظل", f:"NPK متعادل", n:"من أقوى المزهرات في حر مصر." },
+  "جارونيا": { cat:"زهور", q:"geranium plant", aliases:["جرانيوم","إبرة الراعي"], w:"معتدل", s:"شمس الصبح بس", f:"بوتاسيوم للتزهير", n:"بتحب هواء ومكان منور." },
+
+  // نباتات زينة داخلية
+  "بوتس": { cat:"داخلي", q:"pothos plant", aliases:["بوتس ذهبي","Pothos"], w:"كل 4-5 أيام (لما التربة تنشف)", s:"ضوء شباك/لمبة (ضل)", f:"سماد ورقي خفيف", n:"أسهل زرعة للمبتدئين." },
+  "جلد النمر": { cat:"داخلي", q:"snake plant sansevieria", aliases:["سانسيفيريا","سنسفيريا"], w:"كل أسبوعين مرة (انساه)", s:"أي إضاءة (قوية أو ضعيفة)", f:"مش محتاج", n:"الزيادة في الري بتعفّنه." },
+  "زاميا": { cat:"داخلي", q:"zz plant zamioculcas", aliases:["ZZ"], w:"مرة كل 20 يوم", s:"ضل كامل أو ضوء خفيف", f:"NPK كل شهرين", n:"شكلها شيك وبتلمع." },
+  "مونستيـرا": { cat:"داخلي", q:"monstera deliciosa plant", aliases:["مونستيرا"], w:"لما نص التربة ينشف", s:"ضوء ساطع غير مباشر", f:"NPK شهرياً (ربيع/صيف)", n:"بتحب رطوبة الجو… رش خفيف." },
+  "دراسيبنا": { cat:"داخلي", q:"dracaena plant", aliases:["دراسينا"], w:"معتدل", s:"ضوء متوسط", f:"سماد أخضر", n:"امسح الورق عشان يلمع." },
+  "سنجونيوم": { cat:"داخلي", q:"syngonium plant", aliases:["سنغونيوم"], w:"رطوبة مستمرة بدون غرق", s:"ضل", f:"NPK خفيف", n:"بتكبر بسرعة وورقها شبه السهم." },
+  "انتوريوم": { cat:"داخلي", q:"anthurium plant", aliases:["أنثوريوم"], w:"مياه قليلة الكلور", s:"ضوء قوي جداً داخل البيت", f:"سماد زهور", n:"زهرتها بتفضل مدة طويلة." },
+  "فيكس ديكورا": { cat:"داخلي/نصف خارجي", q:"ficus elastica rubber plant", aliases:["فيكس مطاط","روبر"], w:"لما التربة تنشف تماماً", s:"ضوء شباك قوي", f:"NPK", n:"نضّف الورق بقماشة مبلولة." },
+  "بامبو": { cat:"داخلي", q:"lucky bamboo plant", aliases:["لاكي بامبو"], w:"غير المية كل أسبوع (لو في فازة)", s:"ضوء غرفة", f:"نقطتين مغذي في المية", n:"خليك على مية نظيفة عشان ميعفنش." },
+  "كروتون": { cat:"داخلي", q:"croton plant", aliases:["كروتن"], w:"بيحب العطش شوية بين الريات", s:"ضوء قوي عشان يلوّن", f:"NPK", n:"لو الضوء قل… الورق يخضر." },
+  "أجلونيما": { cat:"داخلي", q:"aglaonema plant", aliases:["أجلونيمة"], w:"معتدل", s:"ضل أو ضوء خفيف", f:"NPK خفيف", n:"بتستحمل قلة الضوء." },
+  "فوجير": { cat:"داخلي", q:"fern plant", aliases:["سرخس"], w:"بيحب المية والرش", s:"ضل ورطوبة", f:"سماد ورقي", n:"عايز رطوبة ثابتة." },
+  "يوكا": { cat:"داخلي/خارجي", q:"yucca plant", aliases:["يوكا كين"], w:"قليل جداً", s:"شمس أو ضل", f:"متوازن كل شهرين", n:"قوي جداً ومش دلوع." },
+  "شفليرا": { cat:"داخلي", q:"schefflera plant", aliases:["شيفليرا"], w:"معتدل", s:"ضوء قوي", f:"NPK", n:"لو اتطولت… قص القمم هتفرّع." },
+
+  // صبارات وعصاريات
+  "صبار": { cat:"عصاريات", q:"cactus plant", aliases:["كاكتوس"], w:"نقطة مية كل شهر (حسب الجو)", s:"شمس أو ضوء قوي", f:"مش محتاج", n:"الزيادة في الري = عفن." },
+  "الوفيرا": { cat:"عصاريات", q:"aloe vera plant", aliases:["ألوفيرا","ألوة"], w:"كل 3 أسابيع", s:"شمس خفيفة", f:"مرة في السنة", n:"الجل مفيد… بس بلاش غرق." },
+  "إيشفيريا": { cat:"عصاريات", q:"echeveria succulent", aliases:["Echeveria"], w:"قليل جداً", s:"شمس", f:"سماد كاكتوس خفيف", n:"متلمّسش قلبها مية كتير." },
+  "كالانشو": { cat:"عصاريات مزهرة", q:"kalanchoe plant", aliases:["كالانكوا"], w:"لما التربة تحجر", s:"ضوء شباك", f:"NPK خفيف", n:"زهور ألوان كتير." },
+
+  // أشجار وشجيرات خارجية
+  "فيكس نتدا": { cat:"خارجي", q:"ficus nitida tree", aliases:["فيكس نيتيدا","فيكس سور"], w:"يوم ويوم", s:"شمس", f:"NPK عالي النيتروجين", n:"ممتاز كسور شجري." },
+  "تيكوما": { cat:"خارجي", q:"tecoma stans plant", aliases:["تيكوما صفراء"], w:"معتدل", s:"شمس", f:"متوازن", n:"وردها أصفر مبهج." },
+  "لانتانا": { cat:"خارجي", q:"lantana plant", aliases:["لانتانا ملونة"], w:"قليل", s:"شمس حارقة", f:"مش ضروري", n:"بتلم فراشات وألوانها بتتغير." },
+  "مورينجا": { cat:"خارجي", q:"moringa tree", aliases:["مورينغا"], w:"معتدل", s:"شمس", f:"عضوي", n:"ورقها مفيد… بس محتاجة شمس." },
+  "ليمون": { cat:"مثمر", q:"lemon tree", aliases:["ليمون بلدي"], w:"منتظم (بيكره العطش)", s:"شمس كاملة", f:"حديد + عناصر صغرى", n:"عشان يطرح: شمس + تسميد + ري منتظم." },
+  "زيتون": { cat:"مثمر", q:"olive tree", aliases:["شجرة زيتون"], w:"قليل", s:"شمس", f:"عضوي", n:"شجرة معمّرة وتستحمل." },
+
+  // إضافات
+  "سجاد": { cat:"داخلي", q:"spider plant chlorophytum", aliases:["سبايدر","كلوروفيتوم"], w:"كل يومين/3 حسب الجو", s:"شمس خفيفة أو ضل منور", f:"NPK", n:"قص الشمروخ الزهري لو عايز الورق يقوى." },
+  "قطيفة": { cat:"زهور", q:"marigold plant", aliases:["قطيفة بلدي","ماريجولد"], w:"يوم ويوم", s:"شمس", f:"NPK", n:"بتزهر كويس في الجو المعتدل." },
+  "قرنفل": { cat:"زهور", q:"carnation plant", aliases:["قرنفل بلدي"], w:"معتدل", s:"شمس", f:"متوازن", n:"هواء كويس يقلل الفطريات." },
+  "نعناع سعودي": { cat:"عطري/عشب", q:"mint plant", aliases:["نعناع صغير"], w:"كتير", s:"نصف ظل", f:"عضوي", n:"ريحته قوية… بس عايز ري أكتر." },
+  "زعتر بري": { cat:"عطري/عشب", q:"wild thyme plant", aliases:["زعتر جبلي"], w:"قليل", s:"شمس", f:"لا يوجد", n:"يتحمل حرارة وجفاف." },
+  "أكاسيا": { cat:"خارجي", q:"acacia tree", aliases:["اكاسيا"], w:"قليل", s:"شمس", f:"لا يوجد", n:"شجرة ظل ممتازة." },
+  "بونسياتا": { cat:"داخلي/نصف خارجي", q:"poinsettia plant", aliases:["بنت القنصل","بوينسياتيا"], w:"معتدل", s:"ضوء ساطع", f:"NPK", n:"بتلوّن في الشتاء لو إضاءة كويسة." },
+  "دراسينا ليمون": { cat:"داخلي", q:"dracaena lemon lime plant", aliases:["دراسينا ليمون لايم"], w:"لما تجف", s:"ضوء متوسط", f:"ورقي", n:"لونها مبهج… بلاش شمس حارقة." },
 };
 
-export const editPlantImage = async (base64Image: string, editPrompt: string) => {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [
-        { inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } },
-        { text: editPrompt }
-      ]
-    }
-  });
+/* =========================
+   3) الحالة (Context)
+========================= */
+const state = {
+  plantKey: null,
+  plantNameFromURL: null,
+  plantObj: null,
+  lastTopic: null,        // اخر موضوع اتكلمنا فيه
+  lastAdvice: null,       // نص آخر نصيحة/خلاصة (عشان "اشرحلي")
+  imgIndex: 0,
+  voiceOn: false,
+  recognition: null
+};
 
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
+/* =========================
+   4) Quick Chips (أسئلة متوقعة)
+========================= */
+const QUICK_CHIPS = [
+  "ازيك؟",
+  "خلاصة العناية",
+  "امتى أسقي؟",
+  "أحطك فين؟",
+  "سماد ايه؟",
+  "ورقي بيصفر… ليه؟",
+  "في حشرات… أعمل ايه؟",
+  "انقل الأصيص امتى؟",
+  "إكثار ازاي؟",
+  "تقليم؟",
+  "وريني صورة"
+];
+
+/* =========================
+   5) أدوات
+========================= */
+function escapeHTML(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function normalizeArabic(str){
+  if(!str) return "";
+  return str.toString().trim().toLowerCase()
+    .replace(/[إأآا]/g,"ا")
+    .replace(/ى/g,"ي")
+    .replace(/ة/g,"ه")
+    .replace(/ؤ/g,"و")
+    .replace(/ئ/g,"ي")
+    .replace(/ـ/g,"")
+    .replace(/[ًٌٍَُِّْ]/g,"")
+    .replace(/\s+/g," ");
+}
+function similarity(a,b){
+  a = normalizeArabic(a); b = normalizeArabic(b);
+  if(!a || !b) return 0;
+  if(a === b) return 1;
+  const A = new Set(a.split(" "));
+  const B = new Set(b.split(" "));
+  let inter=0;
+  for(const x of A) if(B.has(x)) inter++;
+  const union = A.size + B.size - inter;
+  let score = union ? inter/union : 0;
+  if(b.startsWith(a) || a.startsWith(b)) score += 0.2;
+  return Math.min(1, score);
+}
+function findPlantKeyByName(name){
+  const n = normalizeArabic(name);
+  if(!n) return null;
+
+  // direct match
+  for(const key of Object.keys(plantDB)){
+    if(normalizeArabic(key) === n) return key;
+  }
+  // alias match
+  for(const [key,obj] of Object.entries(plantDB)){
+    for(const al of (obj.aliases || [])){
+      if(normalizeArabic(al) === n) return key;
+    }
+  }
+  // fuzzy
+  let bestKey=null, bestScore=0;
+  for(const [key,obj] of Object.entries(plantDB)){
+    let sc = similarity(n, key);
+    if(sc > bestScore){ bestScore=sc; bestKey=key; }
+    for(const al of (obj.aliases || [])){
+      let sc2 = similarity(n, al);
+      if(sc2 > bestScore){ bestScore=sc2; bestKey=key; }
+    }
+  }
+  return bestScore >= 0.55 ? bestKey : null;
+}
+function getUnsplash(query){
+  const q = encodeURIComponent((query || "plant").toString());
+  return `https://source.unsplash.com/640x480/?${q}`;
+}
+
+/* =========================
+   6) واجهة الرسائل
+========================= */
+function addMsg(html, side, actions=null){
+  const box = document.getElementById("chatBox");
+  const div = document.createElement("div");
+  div.className = `msg ${side}`;
+  div.innerHTML = html;
+
+  if(actions && side==="bot" && actions.length){
+    const wrap = document.createElement("div");
+    wrap.className = "mini-actions";
+    actions.slice(0, SETTINGS.MAX_ACTIONS).forEach(a=>{
+      const b = document.createElement("button");
+      b.type="button";
+      b.textContent = a.label;
+      b.onclick = ()=> {
+        document.getElementById("userInput").value = a.fill;
+        document.getElementById("userInput").focus();
+      };
+      wrap.appendChild(b);
+    });
+    div.appendChild(wrap);
+  }
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function addTyping(){
+  const html = `<span class="typing">بفكر… <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></span>`;
+  addMsg(html, "bot");
+  return document.querySelector("#chatBox .msg.bot:last-child");
+}
+function removeTyping(node){
+  if(node && node.parentNode) node.parentNode.removeChild(node);
+}
+function handleEnter(e){
+  if(e.key === "Enter") replyLogic();
+}
+
+/* =========================
+   7) ضبط النبات من QR
+========================= */
+function setPlant(typeFromURL){
+  state.plantNameFromURL = typeFromURL || "عامة";
+  const maybeKey = findPlantKeyByName(state.plantNameFromURL);
+  state.plantKey = maybeKey;
+  state.plantObj = maybeKey ? plantDB[maybeKey] : null;
+  state.imgIndex = 0;
+
+  const displayName = maybeKey || state.plantNameFromURL || "عامة";
+  document.getElementById("plantTitle").innerText = "دردشة مع: " + displayName + " 🌱";
+  document.getElementById("plantName").innerText = displayName;
+
+  const sub = state.plantObj
+    ? `نوع: ${state.plantObj.cat} • اسألني بأي صيغة… أنا هافهمك`
+    : `مش لاقي النوع ده… بس هساعدك برضه (ري/نور/أعراض/حشرات)`;
+
+  document.getElementById("plantSub").innerText = sub;
+
+  // Image
+  updatePlantImage(true);
+
+  renderChips();
+}
+function updatePlantImage(initial=false){
+  const imgEl = document.getElementById("plantImg");
+  const badge = document.getElementById("imgBadge");
+
+  const displayName = state.plantKey || state.plantNameFromURL || "plant";
+  const p = state.plantObj;
+
+  let src = "";
+  if(p?.img && Array.isArray(p.img) && p.img.length){
+    src = p.img[state.imgIndex % p.img.length];
+    badge.textContent = `صورة ${ (state.imgIndex % p.img.length) + 1 }/${p.img.length}`;
+  }else{
+    // صور عشوائية حسب البحث
+    const q = p?.q || displayName;
+    src = getUnsplash(q + (initial ? "" : `&sig=${Date.now()}`));
+    badge.textContent = "صورة";
+  }
+
+  imgEl.src = src;
+  imgEl.onerror = () => { imgEl.src = getUnsplash("plant"); };
+}
+function renderChips(){
+  const box = document.getElementById("quickChips");
+  box.innerHTML = "";
+  QUICK_CHIPS.forEach(t=>{
+    const c = document.createElement("div");
+    c.className = "chip";
+    c.textContent = t;
+    c.onclick = ()=>{ document.getElementById("userInput").value = t; document.getElementById("userInput").focus(); };
+    box.appendChild(c);
+  });
+}
+
+/* =========================
+   8) “بداية جديدة” (حل مشكلة حفظ الكلام)
+========================= */
+function resetChat(){
+  document.getElementById("chatBox").innerHTML = "";
+  state.lastTopic = null;
+  state.lastAdvice = null;
+  welcome();
+}
+
+/* =========================
+   9) أوامر ومساعدة
+========================= */
+function showHelp(){
+  const html = `
+    <b>أنا بفهم أغلب كلام الناس ❤️</b><br>
+    جرب تقول أي حاجة زي:<br>
+    • <b>ازيك؟</b> / <b>مين انتي؟</b><br>
+    • <b>امتى أسقي؟</b> / <b>أحطك فين؟</b> / <b>سماد ايه؟</b><br>
+    • <b>ورقي بيصفر</b> / <b>ذابل</b> / <b>بقع بني</b><br>
+    • <b>في حشرات</b> / <b>فطريات</b><br>
+    • <b>وريني صورة</b> / <b>صورة تانية</b><br>
+    <div class="meta-line">ولو كتبت اسم زرعة لوحده (مثلاً: <b>ريحان</b>) هحوّلك عليها فوراً ✅</div>
+  `;
+  addMsg(html, "bot", [
+    {label:"خلاصة العناية", fill:"خلاصة العناية"},
+    {label:"اشرحلي أكتر", fill:"اشرحلي"},
+    {label:"غير النبات", fill:"غير النبات ل: "}
+  ]);
+}
+
+function showPlantList(){
+  const keys = Object.keys(plantDB);
+  let html = `<b>الأنواع المتاحة (${keys.length}):</b><br>`;
+  html += keys.map(k=>`• ${k}`).join("<br>");
+  html += `<div class="meta-line">اكتب اسم أي زرعة منهم لوحده عشان أحوّل لك عليها.</div>`;
+  addMsg(html, "bot", [{label:"غير النبات ل…", fill:"غير النبات ل: "}]);
+}
+
+/* =========================
+   10) ذكاء المحادثة (Intent Engine)
+   - مهم: “كل الكلام المتوقع”
+========================= */
+const INTENTS = {
+  // سلام/ترحيب
+  greet: /(ازيك|عامل ايه|ازى|اهلا|هلا|سلام|السلام عليكم|صباح|مساء|هاي|hello|hi)/,
+  // شكر
+  thanks: /(شكرا|تسلم|متشكر|حبيبي|merci|thx)/,
+  // مين انت
+  who: /(مين (انتي|انت)|اسمك ايه|بتعملي ايه|انت ايه|انتي ايه)/,
+  // سعر
+  price: /(سعر|كام|بكام|تمن|بكم)/,
+  // صورة
+  image: /(صوره|صور|وريني|شكلها|عايز اشوف|show|photo|picture)/,
+  // صورة تانية
+  imageMore: /(صوره تانيه|صوره كمان|غير الصوره|صورة اخرى|next)/,
+  // شرح أكتر
+  explain: /(اشرح|وضح|تفاصيل|اكتر|مزيد|ليه كده|ازاي|يعني ايه)/,
+  // خلاصة
+  summary: /(خلاصه|ملخص|مختصر|عايز خلاصة|عايز الزبدة)/,
+
+  // موضوعات أساسية (مفردات كثيرة)
+  watering: /(ري|اسقي|ميه|مياه|عطش|جدول ري|سقاية|اسق|اسقيها|اسقيه)/,
+  light: /(شمس|نور|ضوء|مكان|اضاءه|ظل|جوه|برا|بلكونه|شباك|في البيت|برا البيت)/,
+  fertilize: /(سماد|تسميد|غذا|اكل|npk|حديد|بوتاسيوم|عناصر|كالسيوم|ماغنسيوم)/,
+  soil: /(تربه|بيتموس|رمل|بيرلايت|صرف|تصريف|طين|كمبوست)/,
+  repot: /(اصيص|قصريه|وعاء|نقل|تدوير|جذور|كبرت|تغيير تربة|بدل تربة)/,
+  pests: /(حشرات|من|بق|بق دقيقي|ذبابة|بيضاء|عنكبوت|سوس|قواقع|نمل)/,
+  fungus: /(فطريات|عفن|بياض دقيقي|بقع سوداء|سواد|عفانه|ريحة وحشه|متحلله)/,
+  symptoms: /(اصفر|اصفرار|ذبل|ذبول|واقع|بتقع|بقع|بني|اسود|ملتفه|مكرمشه|حروق|نشفان)/,
+  pruning: /(تقليم|قص|اقص|اقطع|افرع|تفريع|تشذيب)/,
+  propagate: /(اكثار|عقله|عقل|بذور|خلفات|تفصيص|ترقيد|تطعيم)/,
+  toxicity: /(سام|سميه|قطط|كلاب|اطفال|بيبي|ياكل)/,
+
+  // أوامر
+  help: /(اوامر|مساعده|help|تعليمات|ازاي استخدم)/,
+  list: /(انواع|الانواع|قائمه|القائمة|عندك ايه|list)/,
+  clear: /(امسح|مسح|بداية جديده|ابدأ من الاول|reset)/,
+  change: /^(غير|بدل|حول|خلي)\s*(النبات|الزرعه)?\s*(ل|الى|:)\s*(.+)$/ // group4 اسم النبات
+};
+
+function plantChecklist(plantKey){
+  const p = plantDB[plantKey];
+  if(!p) return [
+    "افحص التربة قبل الري: ناشفة = اسقي، طرية = استنى.",
+    "حطّني في ضوء مناسب (غير مباشر أفضل لمعظم الداخلي).",
+    "صرف كويس أهم حاجة: فتحات أسفل الأصيص."
+  ];
+  return [
+    `💧 <b>ري:</b> ${p.w}`,
+    `☀️ <b>نور:</b> ${p.s}`,
+    `💊 <b>سماد:</b> ${p.f}`
+  ];
+}
+
+function replyAsPlantIntro(){
+  const name = state.plantKey || state.plantNameFromURL || "نبات";
+  const p = state.plantObj;
+  const checklist = plantChecklist(state.plantKey).slice(0,3);
+
+  return `
+    الحمدلله تمام 🌿😄<br>
+    أنا <b>${escapeHTML(name)}</b>… وعلشان أفضل كويسة لازم تهتم بيا شوية 👇<br><br>
+    ${checklist.map(x=>`• ${x}`).join("<br>")}
+    <div class="meta-line">قولّي: “اشرحلي” لو تحب تفاصيل أكتر، أو اسألني عن أي عرض عندك.</div>
+  `;
+}
+
+function buildDeepExplain(topic){
+  const name = state.plantKey || state.plantNameFromURL || "نبات";
+  const p = state.plantObj;
+
+  const common = {
+    watering: `
+      <b>تفاصيل الري (مهم جداً):</b><br>
+      1) حُط صباعك 3-4 سم في التربة: <b>ناشف</b> = اسقي، <b>طرى</b> = استنى.<br>
+      2) اسقي لحد ما الميه تنزل من تحت… وبعدها فضّي الطبق.<br>
+      3) <b>زيادة ري</b> = اصفرار + طراوة + ريحة عفن.<br>
+      4) <b>قلة ري</b> = ذبول + ورق ناشف/مكرمش.<br>
+      <div class="meta-line">لو تقولّي: داخلي/خارجي + حجم الأصيص + الجو (صيف/شتا) أديك جدول أدق.</div>
+    `,
+    light: `
+      <b>تفاصيل الضوء/المكان:</b><br>
+      • <b>شمس مباشرة</b>: الشمس تقع على الورق (يفضل صباح).<br>
+      • <b>ضوء غير مباشر</b>: المكان منور بدون شمس على الورق.<br>
+      • حروق/بقع بنية = شمس ضهر شديدة.<br>
+      • ساق طويلة/نمو ضعيف = نقص ضوء.<br>
+      <div class="meta-line">لفّ الأصيص كل أسبوع علشان النمو يبقى متوازن.</div>
+    `,
+    fertilize: `
+      <b>تفاصيل التسميد:</b><br>
+      • الربيع/الصيف: سماد متوازن كل 3-4 أسابيع لمعظم النباتات.<br>
+      • الشتاء: قلّل أو وقف التسميد للنباتات البطيئة.<br>
+      • أطراف محروقة بعد تسميد = غالباً <b>زيادة</b>… اغسل التربة بري غزير مرة/مرتين.<br>
+    `,
+    symptoms: `
+      <b>تشخيص سريع للأعراض:</b><br>
+      • <b>اصفرار</b>: زيادة ري / نقص ضوء / نقص تغذية.<br>
+      • <b>ذبول</b>: قلة ري أو جذور متعفنة (لو التربة طرية).<br>
+      • <b>بقع بنية</b>: شمس زيادة أو فطريات أو أملاح.<br>
+      • <b>سقوط ورق</b>: صدمة نقل مكان/برد/ري غلط.<br>
+      <div class="meta-line">قولّي 3 حاجات: (داخل/خارج) + (بتسقي كل قد ايه) + (إضاءة) وهديك تشخيص أدق.</div>
+    `,
+    pests: `
+      <b>حشرات – خطة إنقاذ:</b><br>
+      1) اعزلني عن باقي الزرع.<br>
+      2) امسح الورق بمية + صابون لطيف/صابون بوتاسيوم (ثم اشطف).<br>
+      3) رش زيت نيم (لو موجود) كل 5-7 أيام لحد ما تختفي.<br>
+      4) قص الأوراق المتضررة جداً.<br>
+      <div class="meta-line">قولّي شكل الحشرة (نقط بيضا/قطن/شبك) وأنا أحددها لك.</div>
+    `,
+    repot: `
+      <b>نقل/تدوير الأصيص:</b><br>
+      • انقل لما الجذور تملأ الأصيص أو الميه تعدّي بسرعة.<br>
+      • كبر المقاس “درجة واحدة” فقط.<br>
+      • بعد النقل: اسقي مرة كويس وبلاش تسميد أسبوعين.<br>
+    `,
+    soil: `
+      <b>التربة الصح:</b><br>
+      • أهم حاجة: <b>خفيفة + تصريف</b>.<br>
+      • للصبارات: زوّد رمل/بيرلايت وقلّل العضوي.<br>
+      • للظل والرطوبة: زوّد كمبوست وخلي الري بحساب.<br>
+    `,
+    pruning: `
+      <b>التقليم:</b><br>
+      • قص القمم = تفريع وكثافة.<br>
+      • شيل الورق الدبلان أول بأول.<br>
+      • مقص نظيف… وخلي القص فوق عقدة/برعم.<br>
+    `,
+    propagate: `
+      <b>الإكثار:</b><br>
+      • المتسلقات: عقلة بعقدة في مية/تربة.<br>
+      • العصاريات: ورقة/خلفات بعد ما مكان القطع ينشف.<br>
+      • الأعشاب: عقل أو بذور حسب النوع.<br>
+    `,
+    toxicity: `
+      <b>السُمية:</b><br>
+      بعض النباتات ممكن تضر لو اتاكلت (خصوصاً داخليات معينة).<br>
+      لو عندك قطط/كلاب أو أطفال… قولّي اسم النبات وأنا أنبهك بحذر مناسب.<br>
+    `
+  };
+
+  // دمج تفاصيل النبات مع العام
+  if(p && (topic==="watering" || topic==="light" || topic==="fertilize")){
+    const head = (topic==="watering") ? `💧 <b>بالنسبة لـ ${escapeHTML(name)}:</b> ${p.w}` :
+                 (topic==="light")    ? `☀️ <b>بالنسبة لـ ${escapeHTML(name)}:</b> ${p.s}` :
+                                        `💊 <b>بالنسبة لـ ${escapeHTML(name)}:</b> ${p.f}`;
+    return `${head}<br><br>${common[topic]}`;
+  }
+
+  return common[topic] || common.symptoms;
+}
+
+function priceReply(){
+  return `الأسعار بتتغير حسب <b>الحجم</b> و<b>الموسم</b> 😄<br>شرفنا في المشتل وكابتن محمد هيعمل معاك أحلى واجب! 😉`;
+}
+
+/* =========================
+   11) اكتشاف “اسم زرعة” من رسالة المستخدم (تبديل سريع)
+   - لو المستخدم كتب: "ريحان" فقط → نحول فوراً
+   - أو لو كتب: "عايز ريحان" → نحول برضه
+========================= */
+function extractPlantMention(text){
+  const t = normalizeArabic(text);
+  if(!t) return null;
+
+  // كلمات مساعدة تُشال
+  const cleaned = t
+    .replace(/(عايز|عاوزه|عاوز|ممكن|من فضلك|لو سمحت|جرب|عاوزة|بدل|غير|حول|خلي)/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+
+  // لو الجملة قصيرة، ممكن تكون اسم زرعة
+  if(cleaned.split(" ").length <= 3){
+    const k = findPlantKeyByName(cleaned);
+    if(k) return k;
+  }
+
+  // بحث داخل الكلام عن اسم زرعة
+  for(const key of Object.keys(plantDB)){
+    const nk = normalizeArabic(key);
+    if(t.includes(nk)) return key;
+    for(const al of (plantDB[key].aliases || [])){
+      const na = normalizeArabic(al);
+      if(na && t.includes(na)) return key;
     }
   }
   return null;
-};
+}
+
+/* =========================
+   12) المنطق الرئيسي للرد
+========================= */
+function detectIntent(text){
+  const t = normalizeArabic(text);
+
+  // أوامر
+  const changeMatch = t.match(INTENTS.change);
+  if(changeMatch && changeMatch[4]) return { intent:"change", value: changeMatch[4].trim() };
+  if(INTENTS.clear.test(t)) return { intent:"clear" };
+  if(INTENTS.help.test(t)) return { intent:"help" };
+  if(INTENTS.list.test(t)) return { intent:"list" };
+
+  // صور
+  if(INTENTS.imageMore.test(t)) return { intent:"image_more" };
+  if(INTENTS.image.test(t)) return { intent:"image" };
+
+  // أساسيات
+  if(INTENTS.price.test(t)) return { intent:"price" };
+  if(INTENTS.thanks.test(t)) return { intent:"thanks" };
+  if(INTENTS.who.test(t)) return { intent:"who" };
+  if(INTENTS.greet.test(t)) return { intent:"greet" };
+
+  // موضوعات
+  if(INTENTS.summary.test(t)) return { intent:"topic", topic:"summary" };
+  if(INTENTS.watering.test(t)) return { intent:"topic", topic:"watering" };
+  if(INTENTS.light.test(t)) return { intent:"topic", topic:"light" };
+  if(INTENTS.fertilize.test(t)) return { intent:"topic", topic:"fertilize" };
+  if(INTENTS.soil.test(t)) return { intent:"topic", topic:"soil" };
+  if(INTENTS.repot.test(t)) return { intent:"topic", topic:"repot" };
+  if(INTENTS.pests.test(t)) return { intent:"topic", topic:"pests" };
+  if(INTENTS.fungus.test(t)) return { intent:"topic", topic:"fungus" };
+  if(INTENTS.symptoms.test(t)) return { intent:"topic", topic:"symptoms" };
+  if(INTENTS.pruning.test(t)) return { intent:"topic", topic:"pruning" };
+  if(INTENTS.propagate.test(t)) return { intent:"topic", topic:"propagate" };
+  if(INTENTS.toxicity.test(t)) return { intent:"topic", topic:"toxicity" };
+
+  // شرح
+  if(INTENTS.explain.test(t)) return { intent:"explain" };
+
+  // غير معروف
+  return { intent:"unknown" };
+}
+
+function buildSummaryReply(){
+  const name = state.plantKey || state.plantNameFromURL || "نبات";
+  const list = plantChecklist(state.plantKey);
+  const html = `
+    <b>خلاصة عناية ${escapeHTML(name)} 👇</b><br>
+    ${list.map(x=>`• ${x}`).join("<br>")}
+    <div class="meta-line">لو عايز تفاصيل: قول “اشرحلي” ✅</div>
+  `;
+  state.lastTopic = "summary";
+  state.lastAdvice = html;
+  return html;
+}
+
+function unknownFallback(userText){
+  const name = state.plantKey || state.plantNameFromURL || "نبات";
+  const t = normalizeArabic(userText);
+
+  let html = `
+    تمام يا صاحبي ✅<br>
+    أنا <b>${escapeHTML(name)}</b>… خليني أساعدك بشكل ذكي حتى لو السؤال عام.<br><br>
+    <b>قلّي اللي عندك بالظبط:</b> (اصفرار؟ ذبول؟ حشرات؟ ري؟ مكان؟)<br>
+    <div class="meta-line">لو تحب: اكتب “خلاصة العناية” أو “اشرحلي”</div>
+  `;
+
+  // محاولة تلقائية لتفسير
+  if(/اصفر|اصفرار/.test(t)){
+    html = `لو ورقي بيصفر غالباً السبب واحد من دول:<br>
+    • <b>زيادة ري</b> (الأشهر) — خلّي التربة تنشف قبل الري.<br>
+    • <b>نقص ضوء</b> — زوّد الإضاءة تدريجيًا.<br>
+    • <b>نقص تغذية</b> — سماد متوازن خفيف كل 3-4 أسابيع (في الربيع/الصيف).<br>
+    <div class="meta-line">قولّي: بتسقي كل قد ايه؟ وانا داخل ولا خارج؟</div>`;
+    state.lastTopic = "symptoms";
+    state.lastAdvice = html;
+  } else if(/ذبل|ذبول|متهدل/.test(t)){
+    html = `لو أنا ذابل… اعمل اختبار سريع:<br>
+    • لو التربة <b>ناشفة</b>: اسقيني كويس لحد ما الميه تنزل من تحت.<br>
+    • لو التربة <b>طرية/مبلولة</b>: يبقى زيادة ري/تعفن… وقف ري مؤقتاً وحسّن الصرف.<br>
+    <div class="meta-line">قولّي ريحة التربة ايه؟ وفيه سواد في الساق؟</div>`;
+    state.lastTopic = "symptoms";
+    state.lastAdvice = html;
+  } else if(/حشرات|بق|من|ذبابة/.test(t)){
+    html = buildDeepExplain("pests");
+    state.lastTopic = "pests";
+    state.lastAdvice = html;
+  }
+
+  return html;
+}
+
+function replyLogic(){
+  const input = document.getElementById("userInput");
+  const raw = input.value || "";
+  const text = raw.trim();
+  if(!text) return;
+
+  addMsg(escapeHTML(text), "user");
+  input.value = "";
+
+  const typingNode = addTyping();
+
+  setTimeout(()=>{
+    // 1) تبديل زرعة تلقائي لو المستخدم كتب اسم زرعة (بدون ما يتعب)
+    const mentioned = extractPlantMention(text);
+    const intentFirst = detectIntent(text);
+
+    // لو المستخدم كتب اسم زرعة لوحده أو ضمن كلامه… وحالياً زرعة مختلفة → نحول
+    if(mentioned && mentioned !== state.plantKey && intentFirst.intent !== "price"){
+      setPlant(mentioned);
+      document.getElementById("chatBox").innerHTML = ""; // نبدأ شات نظيف مع الزرعة الجديدة
+      removeTyping(typingNode);
+      welcome(`تمام ✅ بقيت أنا <b>${escapeHTML(mentioned)}</b>… اسألني بقى براحتك.`);
+      return;
+    }
+
+    // 2) نكمل بالـ intent الطبيعي
+    const intent = intentFirst;
+
+    let html = "";
+    let actions = [];
+
+    if(intent.intent === "clear"){
+      removeTyping(typingNode);
+      resetChat();
+      return;
+    }
+
+    if(intent.intent === "help"){
+      removeTyping(typingNode);
+      showHelp();
+      return;
+    }
+
+    if(intent.intent === "list"){
+      removeTyping(typingNode);
+      showPlantList();
+      return;
+    }
+
+    if(intent.intent === "change"){
+      const name = intent.value;
+      const k = findPlantKeyByName(name) || name;
+      setPlant(k);
+      document.getElementById("chatBox").innerHTML = "";
+      removeTyping(typingNode);
+      welcome(`تمام ✅ حولت لك على: <b>${escapeHTML(state.plantKey || state.plantNameFromURL)}</b>`);
+      return;
+    }
+
+    if(intent.intent === "price"){
+      html = priceReply();
+      state.lastTopic = "price";
+      state.lastAdvice = html;
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"وريني صورة", fill:"وريني صورة"}
+      ];
+    }
+    else if(intent.intent === "thanks"){
+      html = "العفو يا غالي! نورتنا 💚<div class='meta-line'>لو احتجت أي حاجة عن الري/الشمس/الأعراض أنا موجود.</div>";
+      state.lastTopic = "thanks";
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"اشرحلي", fill:"اشرحلي"}
+      ];
+    }
+    else if(intent.intent === "who"){
+      const name = state.plantKey || state.plantNameFromURL || "زرعة";
+      html = `أنا <b>${escapeHTML(name)}</b> 🌱<br>
+      وظيفتي أساعدك تهتم بيا صح… عايزني أقولك الري ولا المكان ولا أعالج عرض معين؟`;
+      state.lastTopic = "who";
+      state.lastAdvice = html;
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"امتى أسقي؟", fill:"امتى أسقي؟"},
+        {label:"أحطك فين؟", fill:"أحطك فين؟"}
+      ];
+    }
+    else if(intent.intent === "greet"){
+      html = replyAsPlantIntro();
+      state.lastTopic = "greet";
+      state.lastAdvice = html;
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"اشرحلي", fill:"اشرحلي"},
+        {label:"ورقي بيصفر", fill:"ورقي بيصفر… ليه؟"}
+      ];
+    }
+    else if(intent.intent === "image"){
+      updatePlantImage(false);
+      const imgSrc = document.getElementById("plantImg").src;
+      const name = state.plantKey || state.plantNameFromURL || "النبات";
+      html = `اتفضل 🌿 دي صورة <b>${escapeHTML(name)}</b>:<br><img class="img-reply" src="${imgSrc}" alt="plant">`;
+      state.lastTopic = "image";
+      state.lastAdvice = html;
+      actions = [
+        {label:"صورة تانية", fill:"صورة تانية"},
+        {label:"خلاصة العناية", fill:"خلاصة العناية"}
+      ];
+    }
+    else if(intent.intent === "image_more"){
+      state.imgIndex++;
+      updatePlantImage(false);
+      const imgSrc = document.getElementById("plantImg").src;
+      const name = state.plantKey || state.plantNameFromURL || "النبات";
+      html = `صورة كمان لـ <b>${escapeHTML(name)}</b> 😄<br><img class="img-reply" src="${imgSrc}" alt="plant">`;
+      state.lastTopic = "image";
+      state.lastAdvice = html;
+      actions = [
+        {label:"صورة تانية", fill:"صورة تانية"},
+        {label:"امتى أسقي؟", fill:"امتى أسقي؟"}
+      ];
+    }
+    else if(intent.intent === "topic"){
+      if(intent.topic === "summary"){
+        html = buildSummaryReply();
+      } else {
+        html = buildDeepExplain(intent.topic);
+        state.lastTopic = intent.topic;
+        state.lastAdvice = html;
+      }
+
+      actions = [
+        {label:"اشرحلي", fill:"اشرحلي"},
+        {label:"وريني صورة", fill:"وريني صورة"},
+        {label:"حشرات", fill:"في حشرات… أعمل ايه؟"},
+        {label:"اصفرار", fill:"ورقي بيصفر… ليه؟"}
+      ];
+    }
+    else if(intent.intent === "explain"){
+      // يشرح آخر حاجة
+      const topic = state.lastTopic || "summary";
+      if(topic === "summary"){
+        html = buildDeepExplain("watering") + "<br><br>" + buildDeepExplain("light");
+      } else {
+        html = buildDeepExplain(topic);
+      }
+      state.lastAdvice = html;
+
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"امتى أسقي؟", fill:"امتى أسقي؟"},
+        {label:"أحطك فين؟", fill:"أحطك فين؟"}
+      ];
+    }
+    else {
+      html = unknownFallback(text);
+      actions = [
+        {label:"خلاصة العناية", fill:"خلاصة العناية"},
+        {label:"امتى أسقي؟", fill:"امتى أسقي؟"},
+        {label:"أحطك فين؟", fill:"أحطك فين؟"},
+        {label:"في حشرات", fill:"في حشرات… أعمل ايه؟"}
+      ];
+    }
+
+    removeTyping(typingNode);
+    addMsg(html, "bot", actions);
+  }, 650);
+}
+
+/* =========================
+   13) ترحيب
+========================= */
+function welcome(custom=null){
+  const display = state.plantKey || state.plantNameFromURL || "عامة";
+  let html = custom ? custom + "<br><br>" : "";
+  html += `يا أهلاً 👋 أنا <b>${escapeHTML(display)}</b> 🌱<br>`;
+  html += `قولي أي حاجة… وأنا هافهمك 😄<br>`;
+  html += `<div class="meta-line">ممكن تكتب اسم زرعة بس (مثال: <b>ريحان</b>) علشان أحوّلك عليها فوراً.</div>`;
+
+  addMsg(html, "bot", [
+    {label:"ازيك؟", fill:"ازيك؟"},
+    {label:"خلاصة العناية", fill:"خلاصة العناية"},
+    {label:"وريني صورة", fill:"وريني صورة"}
+  ]);
+}
+
+/* =========================
+   14) Voice (اختياري)
+========================= */
+function toggleVoice(){
+  const btn = document.getElementById("voiceBtn");
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    addMsg("للأسف المتصفح ده مش بيدعم الإملاء الصوتي 😅", "bot");
+    return;
+  }
+
+  if(!state.recognition){
+    state.recognition = new SpeechRecognition();
+    state.recognition.lang = "ar-EG";
+    state.recognition.interimResults = false;
+    state.recognition.maxAlternatives = 1;
+    state.recognition.onresult = (event)=>{
+      const transcript = event.results?.[0]?.[0]?.transcript || "";
+      document.getElementById("userInput").value = transcript;
+      btn.classList.remove("active");
+      state.voiceOn = false;
+    };
+    state.recognition.onerror = ()=>{
+      btn.classList.remove("active");
+      state.voiceOn = false;
+    };
+    state.recognition.onend = ()=>{
+      btn.classList.remove("active");
+      state.voiceOn = false;
+    };
+  }
+
+  if(state.voiceOn){
+    state.recognition.stop();
+    state.voiceOn = false;
+    btn.classList.remove("active");
+  }else{
+    state.recognition.start();
+    state.voiceOn = true;
+    btn.classList.add("active");
+  }
+}
+
+/* =========================
+   15) Start
+========================= */
+(function init(){
+  const params = new URLSearchParams(window.location.search);
+  const rawType = params.get("type") || "عامة";
+  const keep = params.get("keep") === "1";
+
+  // حل مشكلة "حافظ كلمتني"
+  if(SETTINGS.RESET_ON_LOAD && !keep){
+    // مش هنحفظ أصلاً… مجرد ضمان
+    sessionStorage.clear();
+  }
+
+  const pType = rawType.replace(/_/g," ");
+  setPlant(pType);
+
+  // ابدأ جديد دائماً (مهم للـ QR)
+  resetChat();
+})();
+</script>
+</body>
+</html>
